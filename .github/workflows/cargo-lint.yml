@@ -33,7 +33,7 @@ jobs:
         uses: Swatinem/rust-cache@v1
     
       - name: cargo check
-        run: cargo check --all-targets --workspace
+        run: cargo check --all-targets --all-features --workspace
 
   cargo-build:
     runs-on: ubuntu-latest
