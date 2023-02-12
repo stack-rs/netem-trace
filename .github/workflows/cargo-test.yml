@@ -1,0 +1,33 @@
+name: Cargo Test
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+      types: [ready_for_review, opened, synchronize, reopened]
+      paths:
+        - '**.rs'
+        - '**/Cargo.toml'
+  workflow_dispatch:
+
+jobs:
+  cargo-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            override: true
+            components: rustfmt, clippy
+      - name: deal with rust cache
+        uses: Swatinem/rust-cache@v1
+      - name: cargo test
+        run: |
+          cargo test --no-fail-fast --verbose --all-features

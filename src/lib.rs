@@ -1,15 +1,110 @@
+//! This crate provides a set of tools to generate traces for network emulation.
+//!
+//! ## Examples
+//!
+//! If you want to use the pre-defined models, please enable the `model` or `bw-model` feature.
+//!
+//! And if you want read configuration from file, `serde` feature should also be enabled.
+//!
+//! An example to build model from configuration:
+//!
+//! ```
+//! # use netem_trace::model::FixedBwConfig;
+//! # use netem_trace::{Bandwidth, Duration, BwTrace};
+//! let mut fixed_bw = FixedBwConfig::new()
+//!     .bw(Bandwidth::from_mbps(24))
+//!     .duration(Duration::from_secs(1))
+//!     .build();
+//! assert_eq!(fixed_bw.next_bw(), Some((Bandwidth::from_mbps(24), Duration::from_secs(1))));
+//! assert_eq!(fixed_bw.next_bw(), None);
+//! ```
+//!
+//! A more common use case is to build model from a configuration file (e.g. json file):
+//!
+//! ```
+//! # use netem_trace::model::{FixedBwConfig, BwTraceConfig};
+//! # use netem_trace::{Bandwidth, Duration, BwTrace};
+//! let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"FixedBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"FixedBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
+//! let des: Box<dyn BwTraceConfig> = serde_json::from_str(config_file_content).unwrap();
+//! let mut model = des.into_model();
+//! assert_eq!(
+//!     model.next_bw(),
+//!     Some((Bandwidth::from_mbps(12), Duration::from_secs(1)))
+//! );
+//! assert_eq!(
+//!     model.next_bw(),
+//!     Some((Bandwidth::from_mbps(24), Duration::from_secs(1)))
+//! );
+//! assert_eq!(
+//!     model.next_bw(),
+//!     Some((Bandwidth::from_mbps(12), Duration::from_secs(1)))
+//! );
+//! assert_eq!(
+//!     model.next_bw(),
+//!     Some((Bandwidth::from_mbps(24), Duration::from_secs(1)))
+//! );
+//! assert_eq!(model.next_bw(), None);
+//! ```
+//!
+//! ## Make your own model
+//!
+//! Here is an simple example of how to do this. For more complicated examples, please refer to our pre-defined models.
+//!
+//! ```
+//! use netem_trace::BwTrace;
+//! use netem_trace::{Bandwidth, Duration};
+//!
+//! struct MyFixedBw {
+//!    bw: Bandwidth,
+//!    duration: Option<Duration>,
+//! }
+//!
+//! impl BwTrace for MyFixedBw {
+//!     fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
+//!         if let Some(duration) = self.duration.take() {
+//!             if duration.is_zero() {
+//!                 None
+//!             } else {
+//!                 Some((self.bw, duration))
+//!             }
+//!         } else {
+//!             None
+//!         }
+//!     }
+//! }
+//! ```
+//!
+//! This is almost the same as how this library implements the [`FixedBw`] model.
+//!
+//! ## Features
+//!
+//! ### Model Features
+//!
+//! - `model`: Enable this feature if you want to use all pre-defined models.
+//!     - `bw-model`: Enable this feature if you want to use the pre-defined [`BwTrace`] models.
+//!
+//! ### Trace Format Features
+//!
+//! - `mahimahi`: Enable this feature if you want to output traces in [mahimahi](https://github.com/ravinet/mahimahi) format.
+//!
+//! ### Other Features
+//!
+//! - `serde`: Enable this features if you want some structs to be serializable/deserializable. Often used with model features.
+
 #[cfg(feature = "mahimahi")]
 pub mod mahimahi;
 #[cfg(feature = "mahimahi")]
-pub use mahimahi::Mahimahi;
+pub use mahimahi::{Mahimahi, MahimahiExt};
 
 #[cfg(any(feature = "bw-model", feature = "model"))]
 pub mod model;
 
 pub use bandwidth::Bandwidth;
 pub use std::time::Duration;
+
 /// The delay describes how long a packet is delayed when going through.
 pub type Delay = std::time::Duration;
+
 /// The loss_pattern describes how the packets are dropped when going through.
 ///
 /// The loss_pattern is a sequence of conditional probabilities describing how packets are dropped.
@@ -26,7 +121,7 @@ pub type Delay = std::time::Duration;
 /// then the probability of packet 101 being lost is 0.1.
 ///
 /// If the packet 101 is lost, then the probability of packet 102 being lost is 0.2.
-/// If the packet 101 is not lost, then the probability of packet 102 being lost is still 0.1
+/// If the packet 101 is not lost, then the probability of packet 102 being lost is still 0.1.
 pub type LossPattern = Vec<f64>;
 
 /// This is a trait that represents a trace of bandwidths.
@@ -75,17 +170,73 @@ pub trait LossTrace {
 mod test {
     use super::*;
     use crate::mahimahi::MahimahiExt;
-    use crate::model::bw::{BwTraceConfig, FixedBwConfig, RepeatedBwPatternConfig};
+    use crate::model::{
+        BoundedNormalizedBwConfig, BwTraceConfig, FixedBwConfig, NormalizedBwConfig,
+        RepeatedBwPatternConfig,
+    };
 
     #[test]
-    fn test_loss_pattern() {
-        let mut b = Box::new(
-            FixedBwConfig::new()
-                .bw(Bandwidth::from_mbps(24))
-                .duration(Duration::from_secs(1)),
-        )
-        .into_model();
-        b.mahimahi_to_file(&Duration::from_secs(1), "fixed.trace");
+    fn test_bw_trace() {
+        let mut fixed_bw = FixedBwConfig::new()
+            .bw(Bandwidth::from_mbps(24))
+            .duration(Duration::from_secs(1))
+            .build();
+        assert_eq!(
+            fixed_bw.next_bw(),
+            Some((Bandwidth::from_mbps(24), Duration::from_secs(1)))
+        );
+        let mut normal_bw = NormalizedBwConfig::new()
+            .mean(Bandwidth::from_mbps(12))
+            .std_dev(Bandwidth::from_mbps(1))
+            .duration(Duration::from_secs(1))
+            .step(Duration::from_millis(100))
+            .seed(42)
+            .build();
+        assert_eq!(
+            normal_bw.next_bw(),
+            Some((Bandwidth::from_bps(12069427), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            normal_bw.next_bw(),
+            Some((Bandwidth::from_bps(12132938), Duration::from_millis(100)))
+        );
+        let mut normal_bw = BoundedNormalizedBwConfig::new()
+            .mean(Bandwidth::from_mbps(12))
+            .std_dev(Bandwidth::from_mbps(1))
+            .duration(Duration::from_secs(1))
+            .step(Duration::from_millis(100))
+            .seed(42)
+            .upper_bound(Bandwidth::from_kbps(12100))
+            .lower_bound(Bandwidth::from_kbps(11900))
+            .build();
+        assert_eq!(
+            normal_bw.next_bw(),
+            Some((Bandwidth::from_bps(12069427), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            normal_bw.next_bw(),
+            Some((Bandwidth::from_bps(12100000), Duration::from_millis(100)))
+        );
+    }
+
+    #[test]
+    fn test_mahimahi() {
+        let mut fixed_bw = FixedBwConfig::new()
+            .bw(Bandwidth::from_mbps(24))
+            .duration(Duration::from_secs(1))
+            .build();
+        assert_eq!(
+            fixed_bw.mahimahi(&Duration::from_millis(5)),
+            [0, 0, 1, 1, 2, 2, 3, 3, 4, 4]
+        );
+        let mut fixed_bw = FixedBwConfig::new()
+            .bw(Bandwidth::from_mbps(12))
+            .duration(Duration::from_secs(1))
+            .build();
+        assert_eq!(
+            fixed_bw.mahimahi_to_string(&Duration::from_millis(5)),
+            "0\n1\n2\n3\n4"
+        );
         let a = vec![
             Box::new(
                 FixedBwConfig::new()
@@ -99,6 +250,33 @@ mod test {
             ) as Box<dyn BwTraceConfig>,
         ];
         let mut c = Box::new(RepeatedBwPatternConfig::new().pattern(a).count(2)).into_model();
-        c.mahimahi_to_file(&Duration::from_secs(4), "repeated.trace");
+        assert_eq!(c.mahimahi(&Duration::from_millis(5)), [0, 1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn test_model_serde() {
+        let a = vec![
+            Box::new(
+                FixedBwConfig::new()
+                    .bw(Bandwidth::from_mbps(12))
+                    .duration(Duration::from_secs(1)),
+            ) as Box<dyn BwTraceConfig>,
+            Box::new(
+                FixedBwConfig::new()
+                    .bw(Bandwidth::from_mbps(24))
+                    .duration(Duration::from_secs(1)),
+            ) as Box<dyn BwTraceConfig>,
+        ];
+        let ser =
+            Box::new(RepeatedBwPatternConfig::new().pattern(a).count(2)) as Box<dyn BwTraceConfig>;
+        let ser_str = serde_json::to_string(&ser).unwrap();
+        let des_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"FixedBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"FixedBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
+        assert_eq!(ser_str, des_str);
+        let des: Box<dyn BwTraceConfig> = serde_json::from_str(des_str).unwrap();
+        let mut model = des.into_model();
+        assert_eq!(
+            model.next_bw(),
+            Some((Bandwidth::from_mbps(12), Duration::from_secs(1)))
+        );
     }
 }

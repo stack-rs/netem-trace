@@ -1,3 +1,25 @@
+//! This module can generate traces in mahimahi format for struct implementing [`BwTrace`].
+//!
+//! Enable `mahimahi` feature to use this module.
+//!
+//! ## Examples
+//!
+//! ```
+//! # use netem_trace::{Mahimahi, MahimahiExt};
+//! # use netem_trace::model::FixedBwConfig;
+//! # use netem_trace::{Bandwidth, Duration};
+//! let mut fixed_bw = FixedBwConfig::new()
+//!     .bw(Bandwidth::from_mbps(24))
+//!     .duration(Duration::from_secs(1))
+//!     .build();
+//! assert_eq!(fixed_bw.mahimahi(&Duration::from_millis(5)), [0, 0, 1, 1, 2, 2, 3, 3, 4, 4]);
+//! let mut fixed_bw = FixedBwConfig::new()
+//!     .bw(Bandwidth::from_mbps(12))
+//!     .duration(Duration::from_secs(1))
+//!     .build();
+//! assert_eq!(fixed_bw.mahimahi_to_string(&Duration::from_millis(5)), "0\n1\n2\n3\n4");
+//! ```
+
 use crate::{Bandwidth, BwTrace, Duration};
 
 const MTU_IN_BYTES: u64 = 1500;
@@ -14,7 +36,22 @@ macro_rules! saturating_duration_as_millis_u64 {
     };
 }
 
+/// The `Mahimahi` trait provides a method to generate a trace in mahimahi format.
+///
+/// The trace is a sequence of timestamps, each timestamp represents an opportunity
+/// of sending a packet at that timestamp.
+///
+/// This trait is automatically implemented for all types that implement `BwTrace`.
+///
+/// This trait is often used with [`MahimahiExt`] trait. [`MahimahiExt`] provides
+/// methods that generates trace and writes it to a string or a file.
 pub trait Mahimahi: BwTrace {
+    /// Generate a timestamp sequence in mahimahi format.
+    ///
+    /// Each timestamp represents an opportunity of sending a packet at that timestamp (in milliseconds).
+    ///
+    /// For example, if the bandwidth is 12Mbps (one packet per millisecond), then the sequence can be:
+    /// \[0, 1, 2, 3, 4\]
     fn mahimahi(&mut self, total_dur: &Duration) -> Vec<u64> {
         let mut timestamp = Duration::from_secs(0);
         let mut v = Vec::new();
@@ -46,15 +83,17 @@ pub trait Mahimahi: BwTrace {
 
 impl<T: BwTrace + ?Sized> Mahimahi for T {}
 
+/// The `MahimahiExt` trait provides some convenient methods to generate a trace in mahimahi format.
 pub trait MahimahiExt: Mahimahi {
+    /// Join the mahimahi timestamp sequence to a string.
     fn mahimahi_to_string(&mut self, total_dur: &Duration) -> String {
         let ts = self.mahimahi(total_dur);
         itertools::join(&ts, "\n")
     }
 
+    /// Write the mahimahi timestamp sequence to a file.
     fn mahimahi_to_file<P: AsRef<std::path::Path>>(&mut self, total_dur: &Duration, path: P) {
-        let ts = self.mahimahi(total_dur);
-        let content = itertools::join(&ts, "\n");
+        let content = self.mahimahi_to_string(total_dur);
         std::fs::write(path, content).unwrap();
     }
 }
