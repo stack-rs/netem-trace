@@ -24,7 +24,7 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 typetag = { version = "0.2.5", optional = true }
 
 [dev-dependencies]
-serde_json = "*"
+serde_json = "1.0"
 
 [features]
 default = ["model"]
