@@ -24,7 +24,12 @@
 //! ```
 //! # use netem_trace::model::{StaticBwConfig, BwTraceConfig};
 //! # use netem_trace::{Bandwidth, Duration, BwTrace};
+//! # #[cfg(not(feature = "human"))]
 //! let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
+//! // The content would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}"
+//! // if the `human` feature is enabled.
+//! # #[cfg(feature = "human")]
+//! # let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}";
 //! let des: Box<dyn BwTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 //! let mut model = des.into_model();
 //! assert_eq!(
@@ -90,6 +95,7 @@
 //! ### Other Features
 //!
 //! - `serde`: Enable this features if you want some structs to be serializable/deserializable. Often used with model features.
+//! - `human`: Enable this feature if you want to use human-readable format in configuration files. Often used with model features.
 
 #[cfg(feature = "mahimahi")]
 pub mod mahimahi;
@@ -171,12 +177,11 @@ mod test {
     use super::*;
     use crate::mahimahi::MahimahiExt;
     use crate::model::{
-        BoundedNormalizedBwConfig, BwTraceConfig, NormalizedBwConfig, RepeatedBwPatternConfig,
-        StaticBwConfig,
+        BwTraceConfig, NormalizedBwConfig, RepeatedBwPatternConfig, StaticBwConfig,
     };
 
     #[test]
-    fn test_bw_trace() {
+    fn test_static_bw_model() {
         let mut static_bw = StaticBwConfig::new()
             .bw(Bandwidth::from_mbps(24))
             .duration(Duration::from_secs(1))
@@ -185,6 +190,10 @@ mod test {
             static_bw.next_bw(),
             Some((Bandwidth::from_mbps(24), Duration::from_secs(1)))
         );
+    }
+
+    #[test]
+    fn test_normalized_bw_model() {
         let mut normal_bw = NormalizedBwConfig::new()
             .mean(Bandwidth::from_mbps(12))
             .std_dev(Bandwidth::from_mbps(1))
@@ -200,7 +209,7 @@ mod test {
             normal_bw.next_bw(),
             Some((Bandwidth::from_bps(12132938), Duration::from_millis(100)))
         );
-        let mut normal_bw = BoundedNormalizedBwConfig::new()
+        let mut normal_bw = NormalizedBwConfig::new()
             .mean(Bandwidth::from_mbps(12))
             .std_dev(Bandwidth::from_mbps(1))
             .duration(Duration::from_secs(1))
@@ -270,7 +279,10 @@ mod test {
         let ser =
             Box::new(RepeatedBwPatternConfig::new().pattern(a).count(2)) as Box<dyn BwTraceConfig>;
         let ser_str = serde_json::to_string(&ser).unwrap();
+        #[cfg(not(feature = "human"))]
         let des_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
+        #[cfg(feature = "human")]
+        let des_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}";
         assert_eq!(ser_str, des_str);
         let des: Box<dyn BwTraceConfig> = serde_json::from_str(des_str).unwrap();
         let mut model = des.into_model();

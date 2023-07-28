@@ -16,7 +16,7 @@ MSRV: 1.60
 Use bandwidth model directly (`model` or `bw-model` feature should be enabled):
 
 ```rust
-use netem_trace::model::{BoundedNormalizedBwConfig, StaticBwConfig, NormalizedBwConfig};
+use netem_trace::model::{StaticBwConfig, NormalizedBwConfig};
 use netem_trace::{Bandwidth, Duration, BwTrace};
 let mut static_bw = StaticBwConfig::new()
     .bw(Bandwidth::from_mbps(24))
@@ -41,7 +41,7 @@ assert_eq!(
     normal_bw.next_bw(),
     Some((Bandwidth::from_bps(12132938), Duration::from_millis(100)))
 );
-let mut normal_bw = BoundedNormalizedBwConfig::new()
+let mut normal_bw = NormalizedBwConfig::new()
     .mean(Bandwidth::from_mbps(12))
     .std_dev(Bandwidth::from_mbps(1))
     .duration(Duration::from_secs(1))
@@ -120,6 +120,8 @@ let ser =
     Box::new(RepeatedBwPatternConfig::new().pattern(a).count(2)) as Box<dyn BwTraceConfig>;
 let ser_str = serde_json::to_string(&ser).unwrap();
 let des_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
+// The content would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}"
+// if the `human` feature is also enabled.
 assert_eq!(ser_str, des_str);
 let des: Box<dyn BwTraceConfig> = serde_json::from_str(des_str).unwrap();
 let mut model = des.into_model();

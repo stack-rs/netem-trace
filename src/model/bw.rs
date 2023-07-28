@@ -5,8 +5,7 @@
 //! ## Predefined models
 //!
 //! - [`StaticBw`]: A trace model with static bandwidth.
-//! - [`NormalizedBw`]: A trace model whose bandwidth subjects to a normal distribution.
-//! - [`BoundedNormalizedBw`]: A trace model whose bandwidth subjects to a normal distribution with upper and lower bounds.
+//! - [`NormalizedBw`]: A trace model whose bandwidth subjects to a normal distribution (can set upper and lower bounds).
 //! - [`RepeatedBwPattern`]: A trace model with a repeated bandwidth pattern.
 //!
 //! ## Examples
@@ -29,7 +28,12 @@
 //! ```
 //! # use netem_trace::model::{StaticBwConfig, BwTraceConfig};
 //! # use netem_trace::{Bandwidth, Duration, BwTrace};
+//! # #[cfg(not(feature = "human"))]
 //! let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
+//! // The content would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}"
+//! // if the `human` feature is enabled.
+//! # #[cfg(feature = "human")]
+//! # let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}";
 //! let des: Box<dyn BwTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 //! let mut model = des.into_model();
 //! assert_eq!(
@@ -101,15 +105,23 @@ pub struct StaticBw {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
 #[derive(Debug, Clone, Default)]
 pub struct StaticBwConfig {
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub bw: Option<Bandwidth>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "humantime_serde")
+    )]
     pub duration: Option<Duration>,
 }
 
 /// The model of a bandwidth trace subjects to a normal distribution.
 ///
-/// The bandwidth will subject to N(mean, std_dev).
+/// The bandwidth will subject to N(mean, std_dev), but bounded within [lower_bound, upper_bound] (optional)
 ///
 /// ## Examples
+///
+/// A simple example without any bound on bandwidth:
 ///
 /// ```
 /// # use netem_trace::model::NormalizedBwConfig;
@@ -124,10 +136,30 @@ pub struct StaticBwConfig {
 /// assert_eq!(normal_bw.next_bw(), Some((Bandwidth::from_bps(12069427), Duration::from_millis(100))));
 /// assert_eq!(normal_bw.next_bw(), Some((Bandwidth::from_bps(12132938), Duration::from_millis(100))));
 /// ```
+///
+/// A more complex example with bounds on bandwidth:
+///
+/// ```
+/// # use netem_trace::model::NormalizedBwConfig;
+/// # use netem_trace::{Bandwidth, Duration, BwTrace};
+/// let mut normal_bw = NormalizedBwConfig::new()
+///     .mean(Bandwidth::from_mbps(12))
+///     .std_dev(Bandwidth::from_mbps(1))
+///     .duration(Duration::from_secs(1))
+///     .step(Duration::from_millis(100))
+///     .seed(42)
+///     .upper_bound(Bandwidth::from_kbps(12100))
+///     .lower_bound(Bandwidth::from_kbps(11900))
+///     .build();
+/// assert_eq!(normal_bw.next_bw(), Some((Bandwidth::from_bps(12069427), Duration::from_millis(100))));
+/// assert_eq!(normal_bw.next_bw(), Some((Bandwidth::from_bps(12100000), Duration::from_millis(100))));
+/// ```
 #[derive(Debug, Clone)]
 pub struct NormalizedBw {
     pub mean: Bandwidth,
     pub std_dev: Bandwidth,
+    pub upper_bound: Option<Bandwidth>,
+    pub lower_bound: Option<Bandwidth>,
     pub duration: Duration,
     pub step: Duration,
     pub seed: u64,
@@ -141,59 +173,27 @@ pub struct NormalizedBw {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
 #[derive(Debug, Clone, Default)]
 pub struct NormalizedBwConfig {
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub mean: Option<Bandwidth>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub std_dev: Option<Bandwidth>,
-    pub duration: Option<Duration>,
-    pub step: Option<Duration>,
-    pub seed: Option<u64>,
-}
-
-/// The model of a bandwidth trace subjects to a bounded normal distribution.
-///
-/// The bandwidth will subject to N(mean, std_dev), but bounded within [lower_bound, upper_bound]
-///
-/// ## Examples
-///
-/// ```
-/// # use netem_trace::model::BoundedNormalizedBwConfig;
-/// # use netem_trace::{Bandwidth, Duration, BwTrace};
-/// let mut normal_bw = BoundedNormalizedBwConfig::new()
-///     .mean(Bandwidth::from_mbps(12))
-///     .std_dev(Bandwidth::from_mbps(1))
-///     .duration(Duration::from_secs(1))
-///     .step(Duration::from_millis(100))
-///     .seed(42)
-///     .upper_bound(Bandwidth::from_kbps(12100))
-///     .lower_bound(Bandwidth::from_kbps(11900))
-///     .build();
-/// assert_eq!(normal_bw.next_bw(), Some((Bandwidth::from_bps(12069427), Duration::from_millis(100))));
-/// assert_eq!(normal_bw.next_bw(), Some((Bandwidth::from_bps(12100000), Duration::from_millis(100))));
-/// ```
-#[derive(Debug, Clone)]
-pub struct BoundedNormalizedBw {
-    pub mean: Bandwidth,
-    pub std_dev: Bandwidth,
-    pub upper_bound: Bandwidth,
-    pub lower_bound: Bandwidth,
-    pub duration: Duration,
-    pub step: Duration,
-    pub seed: u64,
-    rng: StdRng,
-    normal: Normal<f64>,
-}
-
-/// The configuration struct for [`BoundedNormalizedBw`].
-///
-/// See [`BoundedNormalizedBw`] for more details.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
-#[derive(Debug, Clone, Default)]
-pub struct BoundedNormalizedBwConfig {
-    pub mean: Option<Bandwidth>,
-    pub std_dev: Option<Bandwidth>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub upper_bound: Option<Bandwidth>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub lower_bound: Option<Bandwidth>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "humantime_serde")
+    )]
     pub duration: Option<Duration>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "humantime_serde")
+    )]
     pub step: Option<Duration>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub seed: Option<u64>,
 }
 
@@ -210,7 +210,12 @@ pub struct BoundedNormalizedBwConfig {
 /// ```
 /// # use netem_trace::model::{StaticBwConfig, BwTraceConfig};
 /// # use netem_trace::{Bandwidth, Duration, BwTrace};
+/// # #[cfg(not(feature = "human"))]
 /// let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
+/// // The content would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}"
+/// // if the `human` feature is enabled.
+/// # #[cfg(feature = "human")]
+/// # let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}";
 /// let des: Box<dyn BwTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 /// let mut model = des.into_model();
 /// assert_eq!(
@@ -251,7 +256,12 @@ pub struct BoundedNormalizedBwConfig {
 /// ];
 /// let ser = Box::new(RepeatedBwPatternConfig::new().pattern(pat).count(2)) as Box<dyn BwTraceConfig>;
 /// let ser_str = serde_json::to_string(&ser).unwrap();
+/// # #[cfg(not(feature = "human"))]
 /// let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
+/// // The json string would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}"
+/// // if the `human` feature is enabled.
+/// # #[cfg(feature = "human")]
+/// # let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}";
 /// assert_eq!(ser_str, json_str);
 /// ```
 pub struct RepeatedBwPattern {
@@ -288,22 +298,13 @@ impl BwTrace for NormalizedBw {
             None
         } else {
             let bw = self.sample() as u64;
-            let bw = Bandwidth::from_bps(bw);
-            let duration = self.step.min(self.duration);
-            self.duration -= duration;
-            Some((bw, duration))
-        }
-    }
-}
-
-impl BwTrace for BoundedNormalizedBw {
-    fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
-        if self.duration.is_zero() {
-            None
-        } else {
-            let bw = self.sample() as u64;
-            let bw = Bandwidth::from_bps(bw);
-            let bw = bw.max(self.lower_bound).min(self.upper_bound);
+            let mut bw = Bandwidth::from_bps(bw);
+            if let Some(lower_bound) = self.lower_bound {
+                bw = bw.max(lower_bound);
+            }
+            if let Some(upper_bound) = self.upper_bound {
+                bw = bw.min(upper_bound);
+            }
             let duration = self.step.min(self.duration);
             self.duration -= duration;
             Some((bw, duration))
@@ -328,12 +329,6 @@ impl BwTrace for RepeatedBwPattern {
 }
 
 impl NormalizedBw {
-    pub fn sample(&mut self) -> f64 {
-        self.normal.sample(&mut self.rng)
-    }
-}
-
-impl BoundedNormalizedBw {
     pub fn sample(&mut self) -> f64 {
         self.normal.sample(&mut self.rng)
     }
@@ -375,64 +370,6 @@ macro_rules! saturating_bandwidth_as_bps_u64 {
 }
 
 impl NormalizedBwConfig {
-    pub fn new() -> Self {
-        Self {
-            mean: None,
-            std_dev: None,
-            duration: None,
-            step: None,
-            seed: None,
-        }
-    }
-
-    pub fn mean(mut self, mean: Bandwidth) -> Self {
-        self.mean = Some(mean);
-        self
-    }
-
-    pub fn std_dev(mut self, std_dev: Bandwidth) -> Self {
-        self.std_dev = Some(std_dev);
-        self
-    }
-
-    pub fn duration(mut self, duration: Duration) -> Self {
-        self.duration = Some(duration);
-        self
-    }
-
-    pub fn step(mut self, step: Duration) -> Self {
-        self.step = Some(step);
-        self
-    }
-
-    pub fn seed(mut self, seed: u64) -> Self {
-        self.seed = Some(seed);
-        self
-    }
-
-    pub fn build(self) -> NormalizedBw {
-        let mean = self.mean.unwrap_or_else(|| Bandwidth::from_mbps(12));
-        let std_dev = self.std_dev.unwrap_or_else(|| Bandwidth::from_mbps(0));
-        let duration = self.duration.unwrap_or_else(|| Duration::from_secs(1));
-        let step = self.step.unwrap_or_else(|| Duration::from_millis(1));
-        let seed = self.seed.unwrap_or(DEFAULT_RNG_SEED);
-        let rng = StdRng::seed_from_u64(seed);
-        let bw_mean = saturating_bandwidth_as_bps_u64!(mean) as f64;
-        let bw_std_dev = saturating_bandwidth_as_bps_u64!(std_dev) as f64;
-        let normal: Normal<f64> = Normal::new(bw_mean, bw_std_dev).unwrap();
-        NormalizedBw {
-            mean,
-            std_dev,
-            duration,
-            step,
-            seed,
-            rng,
-            normal,
-        }
-    }
-}
-
-impl BoundedNormalizedBwConfig {
     pub fn new() -> Self {
         Self {
             mean: None,
@@ -480,11 +417,11 @@ impl BoundedNormalizedBwConfig {
         self
     }
 
-    pub fn build(self) -> BoundedNormalizedBw {
+    pub fn build(self) -> NormalizedBw {
         let mean = self.mean.unwrap_or_else(|| Bandwidth::from_mbps(12));
         let std_dev = self.std_dev.unwrap_or_else(|| Bandwidth::from_mbps(0));
-        let upper_bound = self.upper_bound.unwrap_or_else(|| Bandwidth::from_mbps(24));
-        let lower_bound = self.lower_bound.unwrap_or_else(|| Bandwidth::from_mbps(0));
+        let upper_bound = self.upper_bound;
+        let lower_bound = self.lower_bound;
         let duration = self.duration.unwrap_or_else(|| Duration::from_secs(1));
         let step = self.step.unwrap_or_else(|| Duration::from_millis(1));
         let seed = self.seed.unwrap_or(DEFAULT_RNG_SEED);
@@ -492,7 +429,7 @@ impl BoundedNormalizedBwConfig {
         let bw_mean = saturating_bandwidth_as_bps_u64!(mean) as f64;
         let bw_std_dev = saturating_bandwidth_as_bps_u64!(std_dev) as f64;
         let normal: Normal<f64> = Normal::new(bw_mean, bw_std_dev).unwrap();
-        BoundedNormalizedBw {
+        NormalizedBw {
             mean,
             std_dev,
             upper_bound,
@@ -547,5 +484,4 @@ macro_rules! impl_bw_trace_config {
 
 impl_bw_trace_config!(StaticBwConfig);
 impl_bw_trace_config!(NormalizedBwConfig);
-impl_bw_trace_config!(BoundedNormalizedBwConfig);
 impl_bw_trace_config!(RepeatedBwPatternConfig);

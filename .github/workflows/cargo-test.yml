@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  cargo-test:
+  cargo-test-no-human:
     runs-on: ubuntu-latest
 
     steps:
@@ -30,4 +30,23 @@ jobs:
         uses: Swatinem/rust-cache@v1
       - name: cargo test
         run: |
-          cargo test --no-fail-fast --verbose --all-features
+          cargo test --no-fail-fast --verbose --features mahimahi --features serde
+
+  cargo-test-full:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            override: true
+            components: rustfmt, clippy
+      - name: deal with rust cache
+        uses: Swatinem/rust-cache@v1
+      - name: cargo test
+        run: |
+          cargo test --no-fail-fast --verbose --features full
