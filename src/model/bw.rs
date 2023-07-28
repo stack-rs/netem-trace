@@ -197,6 +197,159 @@ pub struct NormalizedBwConfig {
     pub seed: Option<u64>,
 }
 
+/// The model of a bandwidth trace whose waveform is sawtooth.
+///
+/// The lowest value of the sawtooth is set by `bottom` while the highest value is set by `top`.
+/// The `interval` describes how long a sawtooth lasts. The `duty_ratio` describes how much the rising time of a sawtooth
+/// occupies the `interval`.
+///
+/// The `step` describes how long between two consecutive bandwidth samples.
+///
+/// The noise of the sawtooth bandwidth will subject to N(0, std_dev), but bounded within [-lower_noise_bound, upper_noise_bound] (optional)
+///
+/// ## Examples
+///
+/// A simple example without any bound on bandwidth:
+///
+/// ```
+/// # use netem_trace::model::SawtoothBwConfig;
+/// # use netem_trace::{Bandwidth, Duration, BwTrace};
+/// let mut sawtooth_bw = SawtoothBwConfig::new()
+///     .bottom(Bandwidth::from_mbps(12))
+///     .top(Bandwidth::from_mbps(16))
+///     .duration(Duration::from_secs(1))
+///     .step(Duration::from_millis(100))
+///     .interval(Duration::from_millis(500))
+///     .duty_ratio(0.8)
+///     .build();
+/// assert_eq!(
+///     sawtooth_bw.next_bw(),
+///     Some((Bandwidth::from_mbps(12), Duration::from_millis(100)))
+/// );
+/// assert_eq!(
+///     sawtooth_bw.next_bw(),
+///     Some((Bandwidth::from_mbps(13), Duration::from_millis(100)))
+/// );
+/// assert_eq!(
+///     sawtooth_bw.next_bw(),
+///     Some((Bandwidth::from_mbps(14), Duration::from_millis(100)))
+/// );
+/// assert_eq!(
+///     sawtooth_bw.next_bw(),
+///     Some((Bandwidth::from_mbps(15), Duration::from_millis(100)))
+/// );
+/// assert_eq!(
+///     sawtooth_bw.next_bw(),
+///     Some((Bandwidth::from_mbps(16), Duration::from_millis(100)))
+/// );
+/// assert_eq!(
+///     sawtooth_bw.next_bw(),
+///     Some((Bandwidth::from_mbps(12), Duration::from_millis(100)))
+/// );
+/// assert_eq!(
+///     sawtooth_bw.next_bw(),
+///     Some((Bandwidth::from_mbps(13), Duration::from_millis(100)))
+/// );
+/// assert_eq!(
+///     sawtooth_bw.next_bw(),
+///     Some((Bandwidth::from_mbps(14), Duration::from_millis(100)))
+/// );
+/// assert_eq!(
+///     sawtooth_bw.next_bw(),
+///     Some((Bandwidth::from_mbps(15), Duration::from_millis(100)))
+/// );
+/// ```
+///
+/// A more complex example with bounds on noise:
+///
+/// ```
+/// # use netem_trace::model::SawtoothBwConfig;
+/// # use netem_trace::{Bandwidth, Duration, BwTrace};
+/// let mut sawtooth_bw = SawtoothBwConfig::new()
+///     .bottom(Bandwidth::from_mbps(12))
+///     .top(Bandwidth::from_mbps(16))
+///     .duration(Duration::from_secs(1))
+///     .step(Duration::from_millis(100))
+///     .interval(Duration::from_millis(500))
+///     .duty_ratio(0.8)
+///     .std_dev(Bandwidth::from_mbps(5))
+///     .upper_noise_bound(Bandwidth::from_mbps(1))
+///     .lower_noise_bound(Bandwidth::from_kbps(500))
+///     .build();
+/// assert_eq!(
+///     sawtooth_bw.next_bw(),
+///     Some((Bandwidth::from_bps(12347139), Duration::from_millis(100)))
+/// );
+/// assert_eq!(
+///     sawtooth_bw.next_bw(),
+///     Some((Bandwidth::from_bps(13664690), Duration::from_millis(100)))
+/// );
+/// assert_eq!(
+///     sawtooth_bw.next_bw(),
+///     Some((Bandwidth::from_mbps(15), Duration::from_millis(100)))
+/// );
+/// assert_eq!(
+///     sawtooth_bw.next_bw(),
+///     Some((Bandwidth::from_bps(14500000), Duration::from_millis(100)))
+/// );
+/// ```
+#[derive(Debug, Clone)]
+pub struct SawtoothBw {
+    pub bottom: Bandwidth,
+    pub top: Bandwidth,
+    pub interval: Duration,
+    pub duty_ratio: f64,
+    pub duration: Duration,
+    pub step: Duration,
+    pub seed: u64,
+    pub std_dev: Bandwidth,
+    pub upper_noise_bound: Option<Bandwidth>,
+    pub lower_noise_bound: Option<Bandwidth>,
+    current: Duration,
+    rng: StdRng,
+    noise: Normal<f64>,
+}
+
+/// The configuration struct for [`SawtoothBw`].
+///
+/// See [`SawtoothBw`] for more details.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
+#[derive(Debug, Clone, Default)]
+pub struct SawtoothBwConfig {
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub bottom: Option<Bandwidth>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub top: Option<Bandwidth>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "humantime_serde")
+    )]
+    pub interval: Option<Duration>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub duty_ratio: Option<f64>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "humantime_serde")
+    )]
+    pub duration: Option<Duration>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "humantime_serde")
+    )]
+    pub step: Option<Duration>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub seed: Option<u64>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub std_dev: Option<Bandwidth>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub upper_noise_bound: Option<Bandwidth>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub lower_noise_bound: Option<Bandwidth>,
+}
+
 /// The model contains an array of bandwidth trace models.
 ///
 /// Combines multiple bandwidth trace models into one bandwidth pattern,
@@ -307,6 +460,39 @@ impl BwTrace for NormalizedBw {
             }
             let duration = self.step.min(self.duration);
             self.duration -= duration;
+            Some((bw, duration))
+        }
+    }
+}
+
+impl BwTrace for SawtoothBw {
+    fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
+        if self.duration.is_zero() {
+            None
+        } else {
+            let current = self.current.as_secs_f64();
+            let change_point = self.interval.as_secs_f64() * self.duty_ratio;
+            let base_bw = if current < change_point {
+                let ratio = current / change_point;
+                self.bottom + (self.top - self.bottom).mul_f64(ratio)
+            } else {
+                let ratio = (current - change_point) / (self.interval.as_secs_f64() - change_point);
+                self.top - (self.top - self.bottom).mul_f64(ratio)
+            };
+            let mut offset = self.noise.sample(&mut self.rng);
+            if let Some(upper_noise_bound) = self.upper_noise_bound {
+                offset = offset.min(upper_noise_bound.as_bps() as f64);
+            }
+            if let Some(lower_noise_bound) = self.lower_noise_bound {
+                offset = offset.max(-(lower_noise_bound.as_bps() as f64));
+            }
+            let bw = Bandwidth::from_bps((base_bw.as_bps() as f64 + offset) as u64);
+            let duration = self.step.min(self.duration);
+            self.duration -= duration;
+            self.current += duration;
+            if self.current >= self.interval {
+                self.current -= self.interval;
+            }
             Some((bw, duration))
         }
     }
@@ -443,6 +629,108 @@ impl NormalizedBwConfig {
     }
 }
 
+impl SawtoothBwConfig {
+    pub fn new() -> Self {
+        Self {
+            bottom: None,
+            top: None,
+            interval: None,
+            duty_ratio: None,
+            duration: None,
+            step: None,
+            seed: None,
+            std_dev: None,
+            upper_noise_bound: None,
+            lower_noise_bound: None,
+        }
+    }
+
+    pub fn bottom(mut self, bottom: Bandwidth) -> Self {
+        self.bottom = Some(bottom);
+        self
+    }
+
+    pub fn top(mut self, top: Bandwidth) -> Self {
+        self.top = Some(top);
+        self
+    }
+
+    pub fn interval(mut self, interval: Duration) -> Self {
+        self.interval = Some(interval);
+        self
+    }
+
+    pub fn duty_ratio(mut self, duty_ratio: f64) -> Self {
+        self.duty_ratio = Some(duty_ratio);
+        self
+    }
+
+    pub fn duration(mut self, duration: Duration) -> Self {
+        self.duration = Some(duration);
+        self
+    }
+
+    pub fn step(mut self, step: Duration) -> Self {
+        self.step = Some(step);
+        self
+    }
+
+    pub fn seed(mut self, seed: u64) -> Self {
+        self.seed = Some(seed);
+        self
+    }
+
+    pub fn std_dev(mut self, std_dev: Bandwidth) -> Self {
+        self.std_dev = Some(std_dev);
+        self
+    }
+
+    pub fn upper_noise_bound(mut self, upper_noise_bound: Bandwidth) -> Self {
+        self.upper_noise_bound = Some(upper_noise_bound);
+        self
+    }
+
+    pub fn lower_noise_bound(mut self, lower_noise_bound: Bandwidth) -> Self {
+        self.lower_noise_bound = Some(lower_noise_bound);
+        self
+    }
+
+    pub fn build(self) -> SawtoothBw {
+        let bottom = self.bottom.unwrap_or_else(|| Bandwidth::from_mbps(0));
+        let top = self.top.unwrap_or_else(|| Bandwidth::from_mbps(12));
+        if bottom > top {
+            panic!("SawtoothBw: bottom bw must be less than top bw");
+        }
+        let interval = self.interval.unwrap_or_else(|| Duration::from_secs(1));
+        let duty_ratio = self.duty_ratio.unwrap_or(0.5);
+        let duration = self.duration.unwrap_or_else(|| Duration::from_secs(1));
+        let step = self.step.unwrap_or_else(|| Duration::from_millis(1));
+        let seed = self.seed.unwrap_or(DEFAULT_RNG_SEED);
+        let rng = StdRng::seed_from_u64(seed);
+        let std_dev = self.std_dev.unwrap_or_else(|| Bandwidth::from_mbps(0));
+        let upper_noise_bound = self.upper_noise_bound;
+        let lower_noise_bound = self.lower_noise_bound;
+        let current = Duration::ZERO;
+        let bw_std_dev = saturating_bandwidth_as_bps_u64!(std_dev) as f64;
+        let noise: Normal<f64> = Normal::new(0.0, bw_std_dev).unwrap();
+        SawtoothBw {
+            bottom,
+            top,
+            interval,
+            duty_ratio,
+            duration,
+            step,
+            seed,
+            std_dev,
+            upper_noise_bound,
+            lower_noise_bound,
+            current,
+            rng,
+            noise,
+        }
+    }
+}
+
 impl RepeatedBwPatternConfig {
     pub fn new() -> Self {
         Self {
@@ -484,4 +772,5 @@ macro_rules! impl_bw_trace_config {
 
 impl_bw_trace_config!(StaticBwConfig);
 impl_bw_trace_config!(NormalizedBwConfig);
+impl_bw_trace_config!(SawtoothBwConfig);
 impl_bw_trace_config!(RepeatedBwPatternConfig);

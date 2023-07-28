@@ -177,7 +177,8 @@ mod test {
     use super::*;
     use crate::mahimahi::MahimahiExt;
     use crate::model::{
-        BwTraceConfig, NormalizedBwConfig, RepeatedBwPatternConfig, StaticBwConfig,
+        BwTraceConfig, NormalizedBwConfig, RepeatedBwPatternConfig, SawtoothBwConfig,
+        StaticBwConfig,
     };
 
     #[test]
@@ -225,6 +226,81 @@ mod test {
         assert_eq!(
             normal_bw.next_bw(),
             Some((Bandwidth::from_bps(12100000), Duration::from_millis(100)))
+        );
+    }
+
+    #[test]
+    fn test_sawtooth_bw_model() {
+        let mut sawtooth_bw = SawtoothBwConfig::new()
+            .bottom(Bandwidth::from_mbps(12))
+            .top(Bandwidth::from_mbps(16))
+            .duration(Duration::from_secs(1))
+            .step(Duration::from_millis(100))
+            .interval(Duration::from_millis(500))
+            .duty_ratio(0.8)
+            .build();
+        assert_eq!(
+            sawtooth_bw.next_bw(),
+            Some((Bandwidth::from_mbps(12), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            sawtooth_bw.next_bw(),
+            Some((Bandwidth::from_mbps(13), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            sawtooth_bw.next_bw(),
+            Some((Bandwidth::from_mbps(14), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            sawtooth_bw.next_bw(),
+            Some((Bandwidth::from_mbps(15), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            sawtooth_bw.next_bw(),
+            Some((Bandwidth::from_mbps(16), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            sawtooth_bw.next_bw(),
+            Some((Bandwidth::from_mbps(12), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            sawtooth_bw.next_bw(),
+            Some((Bandwidth::from_mbps(13), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            sawtooth_bw.next_bw(),
+            Some((Bandwidth::from_mbps(14), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            sawtooth_bw.next_bw(),
+            Some((Bandwidth::from_mbps(15), Duration::from_millis(100)))
+        );
+        let mut sawtooth_bw = SawtoothBwConfig::new()
+            .bottom(Bandwidth::from_mbps(12))
+            .top(Bandwidth::from_mbps(16))
+            .duration(Duration::from_secs(1))
+            .step(Duration::from_millis(100))
+            .interval(Duration::from_millis(500))
+            .duty_ratio(0.8)
+            .std_dev(Bandwidth::from_mbps(5))
+            .upper_noise_bound(Bandwidth::from_mbps(1))
+            .lower_noise_bound(Bandwidth::from_kbps(500))
+            .build();
+        assert_eq!(
+            sawtooth_bw.next_bw(),
+            Some((Bandwidth::from_bps(12347139), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            sawtooth_bw.next_bw(),
+            Some((Bandwidth::from_bps(13664690), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            sawtooth_bw.next_bw(),
+            Some((Bandwidth::from_mbps(15), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            sawtooth_bw.next_bw(),
+            Some((Bandwidth::from_bps(14500000), Duration::from_millis(100)))
         );
     }
 
