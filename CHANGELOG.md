@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## [v0.2.0](https://github.com/stack-rs/netem-trace/releases/tag/v0.2.0) - 2023-07-28 14:24:59
+
+- add a new model `SawtoothBw` whose waveform is sawtooth.
+- merge two normalized bandwidth models into one `NormalizedBw` model.
+- add feature `human` of human-readable duration serialization
+- add feature `full` of enabling all features
+
+BREAKING CHANGE: rename `FixedBw` to `StaticBw`
+
+### Feature
+
+- model:
+  - add SawtoothBw model ([27d237d](https://github.com/stack-rs/netem-trace/commit/27d237d40c20838818665907615a97dfdde05018))
+  - merge normalized bw models ([5f2a446](https://github.com/stack-rs/netem-trace/commit/5f2a4460243939991ded7c300852effecc52fb4d))
+  - rename FixedBw to StaticBw ([ca4d804](https://github.com/stack-rs/netem-trace/commit/ca4d80489f77a2b43a290fc50d26474e2793a6f4))
+
+### Documentation
+
+- readme:
+  - update contributors ([28c59da](https://github.com/stack-rs/netem-trace/commit/28c59dac3cef8b928ee0c28e73e55d8a4918b677))
+
 ## [v0.1.0](https://github.com/stack-rs/netem-trace/releases/tag/v0.1.0) - 2023-02-12 07:30:18
 
 *No description*
