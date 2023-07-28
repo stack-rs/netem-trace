@@ -13,7 +13,7 @@ jobs:
           fetch-depth: 0
       - uses: BobAnkh/auto-generate-changelog@master
         with:
-          ACCESS_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          ACCESS_TOKEN: ${{secrets.CHANGELOG_PAT_STACK}}
           PATH: 'CHANGELOG.md'
           COMMIT_MESSAGE: 'docs(changelog): update release notes'
           TYPE: 'feat:Feature,fix:Bug Fixes,docs:Documentation,refactor:Refactor,perf:Performance Improvements'
@@ -27,7 +27,7 @@ jobs:
         with:
           CONTRIBUTOR: '### Contributors'
           COLUMN_PER_ROW: '6'
-          ACCESS_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          ACCESS_TOKEN: ${{secrets.CHANGELOG_PAT_STACK}}
           IMG_WIDTH: '100'
           FONT_SIZE: '14'
           PATH: 'README.md'
