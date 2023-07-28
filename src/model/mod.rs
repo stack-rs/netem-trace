@@ -12,9 +12,9 @@
 pub mod bw;
 
 #[cfg(feature = "bw-model")]
-pub use bw::{BoundedNormalizedBw, FixedBw, NormalizedBw, RepeatedBwPattern};
+pub use bw::{BoundedNormalizedBw, NormalizedBw, RepeatedBwPattern, StaticBw};
 #[cfg(feature = "bw-model")]
 pub use bw::{
-    BoundedNormalizedBwConfig, BwTraceConfig, FixedBwConfig, NormalizedBwConfig,
-    RepeatedBwPatternConfig,
+    BoundedNormalizedBwConfig, BwTraceConfig, NormalizedBwConfig, RepeatedBwPatternConfig,
+    StaticBwConfig,
 };

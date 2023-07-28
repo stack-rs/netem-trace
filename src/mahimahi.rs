@@ -6,18 +6,18 @@
 //!
 //! ```
 //! # use netem_trace::{Mahimahi, MahimahiExt};
-//! # use netem_trace::model::FixedBwConfig;
+//! # use netem_trace::model::StaticBwConfig;
 //! # use netem_trace::{Bandwidth, Duration};
-//! let mut fixed_bw = FixedBwConfig::new()
+//! let mut static_bw = StaticBwConfig::new()
 //!     .bw(Bandwidth::from_mbps(24))
 //!     .duration(Duration::from_secs(1))
 //!     .build();
-//! assert_eq!(fixed_bw.mahimahi(&Duration::from_millis(5)), [0, 0, 1, 1, 2, 2, 3, 3, 4, 4]);
-//! let mut fixed_bw = FixedBwConfig::new()
+//! assert_eq!(static_bw.mahimahi(&Duration::from_millis(5)), [0, 0, 1, 1, 2, 2, 3, 3, 4, 4]);
+//! let mut static_bw = StaticBwConfig::new()
 //!     .bw(Bandwidth::from_mbps(12))
 //!     .duration(Duration::from_secs(1))
 //!     .build();
-//! assert_eq!(fixed_bw.mahimahi_to_string(&Duration::from_millis(5)), "0\n1\n2\n3\n4");
+//! assert_eq!(static_bw.mahimahi_to_string(&Duration::from_millis(5)), "0\n1\n2\n3\n4");
 //! ```
 
 use crate::{Bandwidth, BwTrace, Duration};

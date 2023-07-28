@@ -9,22 +9,22 @@
 //! An example to build model from configuration:
 //!
 //! ```
-//! # use netem_trace::model::FixedBwConfig;
+//! # use netem_trace::model::StaticBwConfig;
 //! # use netem_trace::{Bandwidth, Duration, BwTrace};
-//! let mut fixed_bw = FixedBwConfig::new()
+//! let mut static_bw = StaticBwConfig::new()
 //!     .bw(Bandwidth::from_mbps(24))
 //!     .duration(Duration::from_secs(1))
 //!     .build();
-//! assert_eq!(fixed_bw.next_bw(), Some((Bandwidth::from_mbps(24), Duration::from_secs(1))));
-//! assert_eq!(fixed_bw.next_bw(), None);
+//! assert_eq!(static_bw.next_bw(), Some((Bandwidth::from_mbps(24), Duration::from_secs(1))));
+//! assert_eq!(static_bw.next_bw(), None);
 //! ```
 //!
 //! A more common use case is to build model from a configuration file (e.g. json file):
 //!
 //! ```
-//! # use netem_trace::model::{FixedBwConfig, BwTraceConfig};
+//! # use netem_trace::model::{StaticBwConfig, BwTraceConfig};
 //! # use netem_trace::{Bandwidth, Duration, BwTrace};
-//! let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"FixedBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"FixedBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
+//! let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 //! let des: Box<dyn BwTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 //! let mut model = des.into_model();
 //! assert_eq!(
@@ -54,12 +54,12 @@
 //! use netem_trace::BwTrace;
 //! use netem_trace::{Bandwidth, Duration};
 //!
-//! struct MyFixedBw {
+//! struct MyStaticBw {
 //!    bw: Bandwidth,
 //!    duration: Option<Duration>,
 //! }
 //!
-//! impl BwTrace for MyFixedBw {
+//! impl BwTrace for MyStaticBw {
 //!     fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
 //!         if let Some(duration) = self.duration.take() {
 //!             if duration.is_zero() {
@@ -74,7 +74,7 @@
 //! }
 //! ```
 //!
-//! This is almost the same as how this library implements the [`FixedBw`] model.
+//! This is almost the same as how this library implements the [`StaticBw`] model.
 //!
 //! ## Features
 //!
@@ -171,18 +171,18 @@ mod test {
     use super::*;
     use crate::mahimahi::MahimahiExt;
     use crate::model::{
-        BoundedNormalizedBwConfig, BwTraceConfig, FixedBwConfig, NormalizedBwConfig,
-        RepeatedBwPatternConfig,
+        BoundedNormalizedBwConfig, BwTraceConfig, NormalizedBwConfig, RepeatedBwPatternConfig,
+        StaticBwConfig,
     };
 
     #[test]
     fn test_bw_trace() {
-        let mut fixed_bw = FixedBwConfig::new()
+        let mut static_bw = StaticBwConfig::new()
             .bw(Bandwidth::from_mbps(24))
             .duration(Duration::from_secs(1))
             .build();
         assert_eq!(
-            fixed_bw.next_bw(),
+            static_bw.next_bw(),
             Some((Bandwidth::from_mbps(24), Duration::from_secs(1)))
         );
         let mut normal_bw = NormalizedBwConfig::new()
@@ -221,30 +221,30 @@ mod test {
 
     #[test]
     fn test_mahimahi() {
-        let mut fixed_bw = FixedBwConfig::new()
+        let mut static_bw = StaticBwConfig::new()
             .bw(Bandwidth::from_mbps(24))
             .duration(Duration::from_secs(1))
             .build();
         assert_eq!(
-            fixed_bw.mahimahi(&Duration::from_millis(5)),
+            static_bw.mahimahi(&Duration::from_millis(5)),
             [0, 0, 1, 1, 2, 2, 3, 3, 4, 4]
         );
-        let mut fixed_bw = FixedBwConfig::new()
+        let mut static_bw = StaticBwConfig::new()
             .bw(Bandwidth::from_mbps(12))
             .duration(Duration::from_secs(1))
             .build();
         assert_eq!(
-            fixed_bw.mahimahi_to_string(&Duration::from_millis(5)),
+            static_bw.mahimahi_to_string(&Duration::from_millis(5)),
             "0\n1\n2\n3\n4"
         );
         let a = vec![
             Box::new(
-                FixedBwConfig::new()
+                StaticBwConfig::new()
                     .bw(Bandwidth::from_mbps(12))
                     .duration(Duration::from_secs(1)),
             ) as Box<dyn BwTraceConfig>,
             Box::new(
-                FixedBwConfig::new()
+                StaticBwConfig::new()
                     .bw(Bandwidth::from_mbps(24))
                     .duration(Duration::from_secs(1)),
             ) as Box<dyn BwTraceConfig>,
@@ -257,12 +257,12 @@ mod test {
     fn test_model_serde() {
         let a = vec![
             Box::new(
-                FixedBwConfig::new()
+                StaticBwConfig::new()
                     .bw(Bandwidth::from_mbps(12))
                     .duration(Duration::from_secs(1)),
             ) as Box<dyn BwTraceConfig>,
             Box::new(
-                FixedBwConfig::new()
+                StaticBwConfig::new()
                     .bw(Bandwidth::from_mbps(24))
                     .duration(Duration::from_secs(1)),
             ) as Box<dyn BwTraceConfig>,
@@ -270,7 +270,7 @@ mod test {
         let ser =
             Box::new(RepeatedBwPatternConfig::new().pattern(a).count(2)) as Box<dyn BwTraceConfig>;
         let ser_str = serde_json::to_string(&ser).unwrap();
-        let des_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"FixedBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"FixedBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
+        let des_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
         assert_eq!(ser_str, des_str);
         let des: Box<dyn BwTraceConfig> = serde_json::from_str(des_str).unwrap();
         let mut model = des.into_model();

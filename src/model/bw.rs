@@ -4,7 +4,7 @@
 //!
 //! ## Predefined models
 //!
-//! - [`FixedBw`]: A trace model with fixed bandwidth.
+//! - [`StaticBw`]: A trace model with static bandwidth.
 //! - [`NormalizedBw`]: A trace model whose bandwidth subjects to a normal distribution.
 //! - [`BoundedNormalizedBw`]: A trace model whose bandwidth subjects to a normal distribution with upper and lower bounds.
 //! - [`RepeatedBwPattern`]: A trace model with a repeated bandwidth pattern.
@@ -14,22 +14,22 @@
 //! An example to build model from configuration:
 //!
 //! ```
-//! # use netem_trace::model::FixedBwConfig;
+//! # use netem_trace::model::StaticBwConfig;
 //! # use netem_trace::{Bandwidth, Duration, BwTrace};
-//! let mut fixed_bw = FixedBwConfig::new()
+//! let mut static_bw = StaticBwConfig::new()
 //!     .bw(Bandwidth::from_mbps(24))
 //!     .duration(Duration::from_secs(1))
 //!     .build();
-//! assert_eq!(fixed_bw.next_bw(), Some((Bandwidth::from_mbps(24), Duration::from_secs(1))));
-//! assert_eq!(fixed_bw.next_bw(), None);
+//! assert_eq!(static_bw.next_bw(), Some((Bandwidth::from_mbps(24), Duration::from_secs(1))));
+//! assert_eq!(static_bw.next_bw(), None);
 //! ```
 //!
 //! A more common use case is to build model from a configuration file (e.g. json file):
 //!
 //! ```
-//! # use netem_trace::model::{FixedBwConfig, BwTraceConfig};
+//! # use netem_trace::model::{StaticBwConfig, BwTraceConfig};
 //! # use netem_trace::{Bandwidth, Duration, BwTrace};
-//! let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"FixedBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"FixedBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
+//! let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 //! let des: Box<dyn BwTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 //! let mut model = des.into_model();
 //! assert_eq!(
@@ -75,32 +75,32 @@ dyn_clone::clone_trait_object!(BwTraceConfig);
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// The model of a fixed bandwidth trace.
+/// The model of a static bandwidth trace.
 ///
 /// ## Examples
 ///
 /// ```
-/// # use netem_trace::model::FixedBwConfig;
+/// # use netem_trace::model::StaticBwConfig;
 /// # use netem_trace::{Bandwidth, Duration, BwTrace};
-/// let mut fixed_bw = FixedBwConfig::new()
+/// let mut static_bw = StaticBwConfig::new()
 ///     .bw(Bandwidth::from_mbps(24))
 ///     .duration(Duration::from_secs(1))
 ///     .build();
-/// assert_eq!(fixed_bw.next_bw(), Some((Bandwidth::from_mbps(24), Duration::from_secs(1))));
-/// assert_eq!(fixed_bw.next_bw(), None);
+/// assert_eq!(static_bw.next_bw(), Some((Bandwidth::from_mbps(24), Duration::from_secs(1))));
+/// assert_eq!(static_bw.next_bw(), None);
 /// ```
 #[derive(Debug, Clone)]
-pub struct FixedBw {
+pub struct StaticBw {
     pub bw: Bandwidth,
     pub duration: Option<Duration>,
 }
 
-/// The configuration struct for [`FixedBw`].
+/// The configuration struct for [`StaticBw`].
 ///
-/// See [`FixedBw`] for more details.
+/// See [`StaticBw`] for more details.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
 #[derive(Debug, Clone, Default)]
-pub struct FixedBwConfig {
+pub struct StaticBwConfig {
     pub bw: Option<Bandwidth>,
     pub duration: Option<Duration>,
 }
@@ -208,9 +208,9 @@ pub struct BoundedNormalizedBwConfig {
 /// deserialize it into a [`RepeatedBwPatternConfig`]:
 ///
 /// ```
-/// # use netem_trace::model::{FixedBwConfig, BwTraceConfig};
+/// # use netem_trace::model::{StaticBwConfig, BwTraceConfig};
 /// # use netem_trace::{Bandwidth, Duration, BwTrace};
-/// let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"FixedBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"FixedBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
+/// let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 /// let des: Box<dyn BwTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 /// let mut model = des.into_model();
 /// assert_eq!(
@@ -235,23 +235,23 @@ pub struct BoundedNormalizedBwConfig {
 /// You can also build manually:
 ///
 /// ```
-/// # use netem_trace::model::{FixedBwConfig, BwTraceConfig, RepeatedBwPatternConfig};
+/// # use netem_trace::model::{StaticBwConfig, BwTraceConfig, RepeatedBwPatternConfig};
 /// # use netem_trace::{Bandwidth, Duration, BwTrace};
 /// let pat = vec![
 ///     Box::new(
-///         FixedBwConfig::new()
+///         StaticBwConfig::new()
 ///             .bw(Bandwidth::from_mbps(12))
 ///             .duration(Duration::from_secs(1)),
 ///     ) as Box<dyn BwTraceConfig>,
 ///     Box::new(
-///         FixedBwConfig::new()
+///         StaticBwConfig::new()
 ///             .bw(Bandwidth::from_mbps(24))
 ///             .duration(Duration::from_secs(1)),
 ///     ) as Box<dyn BwTraceConfig>,
 /// ];
 /// let ser = Box::new(RepeatedBwPatternConfig::new().pattern(pat).count(2)) as Box<dyn BwTraceConfig>;
 /// let ser_str = serde_json::to_string(&ser).unwrap();
-/// let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"FixedBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"FixedBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
+/// let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 /// assert_eq!(ser_str, json_str);
 /// ```
 pub struct RepeatedBwPattern {
@@ -268,7 +268,7 @@ pub struct RepeatedBwPatternConfig {
     pub count: usize,
 }
 
-impl BwTrace for FixedBw {
+impl BwTrace for StaticBw {
     fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
         if let Some(duration) = self.duration.take() {
             if duration.is_zero() {
@@ -339,7 +339,7 @@ impl BoundedNormalizedBw {
     }
 }
 
-impl FixedBwConfig {
+impl StaticBwConfig {
     pub fn new() -> Self {
         Self {
             bw: None,
@@ -357,8 +357,8 @@ impl FixedBwConfig {
         self
     }
 
-    pub fn build(self) -> FixedBw {
-        FixedBw {
+    pub fn build(self) -> StaticBw {
+        StaticBw {
             bw: self.bw.unwrap_or_else(|| Bandwidth::from_mbps(12)),
             duration: Some(self.duration.unwrap_or_else(|| Duration::from_secs(1))),
         }
@@ -545,7 +545,7 @@ macro_rules! impl_bw_trace_config {
     };
 }
 
-impl_bw_trace_config!(FixedBwConfig);
+impl_bw_trace_config!(StaticBwConfig);
 impl_bw_trace_config!(NormalizedBwConfig);
 impl_bw_trace_config!(BoundedNormalizedBwConfig);
 impl_bw_trace_config!(RepeatedBwPatternConfig);
