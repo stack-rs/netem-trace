@@ -102,7 +102,12 @@ pub mod mahimahi;
 #[cfg(feature = "mahimahi")]
 pub use mahimahi::{Mahimahi, MahimahiExt};
 
-#[cfg(any(feature = "bw-model", feature = "model"))]
+#[cfg(any(
+    feature = "bw-model",
+    feature = "delay-model",
+    feature = "loss-model",
+    feature = "model"
+))]
 pub mod model;
 
 pub use bandwidth::Bandwidth;
