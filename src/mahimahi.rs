@@ -88,7 +88,7 @@ pub trait MahimahiExt: Mahimahi {
     /// Join the mahimahi timestamp sequence to a string.
     fn mahimahi_to_string(&mut self, total_dur: &Duration) -> String {
         let ts = self.mahimahi(total_dur);
-        itertools::join(&ts, "\n")
+        itertools::join(ts, "\n")
     }
 
     /// Write the mahimahi timestamp sequence to a file.
