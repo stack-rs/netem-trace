@@ -177,13 +177,43 @@ pub trait LossTrace {
     fn next_loss(&mut self) -> Option<(LossPattern, Duration)>;
 }
 
+/// This is a trait indicating the ability to reset the trace.
+///
+/// This trait is essential for Repeatable Trace.
+///
+/// The reset function resets the trace to its initial state.
+pub trait Resettable {
+    fn reset(&mut self);
+}
+
+/// Repeatable [`BwTrace`].
+///
+/// See [`BwTrace`] for more details.
+pub trait RepeatableBwTrace: BwTrace + Resettable {}
+
+impl<T: BwTrace + Resettable> RepeatableBwTrace for T {}
+
+/// Repeatable [`DelayTrace`].
+///
+/// See [`DelayTrace`] for more details.
+pub trait RepeatableDelayTrace: DelayTrace + Resettable {}
+
+impl<T: DelayTrace + Resettable> RepeatableDelayTrace for T {}
+
+/// Repeatable [`LossTrace`].
+///
+/// See [`LossTrace`] for more details.
+pub trait RepeatableLossTrace: LossTrace + Resettable {}
+
+impl<T: LossTrace + Resettable> RepeatableLossTrace for T {}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::mahimahi::MahimahiExt;
     use crate::model::{
-        BwTraceConfig, NormalizedBwConfig, RepeatedBwPatternConfig, SawtoothBwConfig,
-        StaticBwConfig,
+        BwTraceConfig, NormalizedBwConfig, RepeatableBwTraceConfig, RepeatedBwPatternConfig,
+        SawtoothBwConfig, StaticBwConfig,
     };
 
     #[test]
@@ -332,14 +362,16 @@ mod test {
                 StaticBwConfig::new()
                     .bw(Bandwidth::from_mbps(12))
                     .duration(Duration::from_secs(1)),
-            ) as Box<dyn BwTraceConfig>,
+            ) as Box<dyn RepeatableBwTraceConfig>,
             Box::new(
                 StaticBwConfig::new()
                     .bw(Bandwidth::from_mbps(24))
                     .duration(Duration::from_secs(1)),
-            ) as Box<dyn BwTraceConfig>,
+            ) as Box<dyn RepeatableBwTraceConfig>,
         ];
-        let mut c = Box::new(RepeatedBwPatternConfig::new().pattern(a).count(2)).into_model();
+        let mut c = RepeatableBwTraceConfig::into_model(Box::new(
+            RepeatedBwPatternConfig::new().pattern(a).count(2),
+        ));
         assert_eq!(c.mahimahi(&Duration::from_millis(5)), [0, 1, 2, 3, 4]);
     }
 
@@ -350,12 +382,12 @@ mod test {
                 StaticBwConfig::new()
                     .bw(Bandwidth::from_mbps(12))
                     .duration(Duration::from_secs(1)),
-            ) as Box<dyn BwTraceConfig>,
+            ) as Box<dyn RepeatableBwTraceConfig>,
             Box::new(
                 StaticBwConfig::new()
                     .bw(Bandwidth::from_mbps(24))
                     .duration(Duration::from_secs(1)),
-            ) as Box<dyn BwTraceConfig>,
+            ) as Box<dyn RepeatableBwTraceConfig>,
         ];
         let ser =
             Box::new(RepeatedBwPatternConfig::new().pattern(a).count(2)) as Box<dyn BwTraceConfig>;

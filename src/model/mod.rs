@@ -7,7 +7,9 @@
 //! is used to generate the trace and maintain inner states.
 //!
 //! Enable `bw-model` feature to use the BwTrace models.
+//!
 //! Enable `delay-model` feature to use the DelayTrace models.
+//!
 //! Enable `loss-model` feature to use the LossTrace models.
 
 #[cfg(feature = "bw-model")]
@@ -15,7 +17,8 @@ pub mod bw;
 
 #[cfg(feature = "bw-model")]
 pub use bw::{
-    BwTraceConfig, NormalizedBwConfig, RepeatedBwPatternConfig, SawtoothBwConfig, StaticBwConfig,
+    BwTraceConfig, NormalizedBwConfig, RepeatableBwTraceConfig, RepeatedBwPatternConfig,
+    SawtoothBwConfig, StaticBwConfig,
 };
 #[cfg(feature = "bw-model")]
 pub use bw::{NormalizedBw, RepeatedBwPattern, SawtoothBw, StaticBw};

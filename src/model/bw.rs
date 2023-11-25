@@ -54,12 +54,11 @@
 //! );
 //! assert_eq!(model.next_bw(), None);
 //! ```
-use crate::{Bandwidth, BwTrace, Duration};
+use crate::{Bandwidth, BwTrace, Duration, RepeatableBwTrace, Resettable};
 use dyn_clone::DynClone;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use rand_distr::{Distribution, Normal};
-use std::collections::VecDeque;
 
 const DEFAULT_RNG_SEED: u64 = 42;
 
@@ -75,6 +74,16 @@ pub trait BwTraceConfig: DynClone {
 }
 
 dyn_clone::clone_trait_object!(BwTraceConfig);
+
+/// Repeatable [`BwTraceConfig`].
+///
+/// See [`BwTraceConfig`] for more details.
+#[cfg_attr(feature = "serde", typetag::serde)]
+pub trait RepeatableBwTraceConfig: DynClone {
+    fn into_model(self: Box<Self>) -> Box<dyn RepeatableBwTrace>;
+}
+
+dyn_clone::clone_trait_object!(RepeatableBwTraceConfig);
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -96,7 +105,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone)]
 pub struct StaticBw {
     pub bw: Bandwidth,
-    pub duration: Option<Duration>,
+    pub duration: Duration,
+    current: Duration,
 }
 
 /// The configuration struct for [`StaticBw`].
@@ -163,6 +173,7 @@ pub struct NormalizedBw {
     pub duration: Duration,
     pub step: Duration,
     pub seed: u64,
+    current: Duration,
     rng: StdRng,
     normal: Normal<f64>,
 }
@@ -306,6 +317,7 @@ pub struct SawtoothBw {
     pub upper_noise_bound: Option<Bandwidth>,
     pub lower_noise_bound: Option<Bandwidth>,
     current: Duration,
+    current_in_cycle: Duration,
     rng: StdRng,
     noise: Normal<f64>,
 }
@@ -355,6 +367,8 @@ pub struct SawtoothBwConfig {
 /// Combines multiple bandwidth trace models into one bandwidth pattern,
 /// and repeat the pattern for `count` times.
 ///
+/// If `count` is 0, the pattern will be repeated forever.
+///
 /// ## Examples
 ///
 /// The most common use case is to read from a configuration file and
@@ -393,19 +407,19 @@ pub struct SawtoothBwConfig {
 /// You can also build manually:
 ///
 /// ```
-/// # use netem_trace::model::{StaticBwConfig, BwTraceConfig, RepeatedBwPatternConfig};
+/// # use netem_trace::model::{StaticBwConfig, BwTraceConfig, RepeatableBwTraceConfig, RepeatedBwPatternConfig};
 /// # use netem_trace::{Bandwidth, Duration, BwTrace};
 /// let pat = vec![
 ///     Box::new(
 ///         StaticBwConfig::new()
 ///             .bw(Bandwidth::from_mbps(12))
 ///             .duration(Duration::from_secs(1)),
-///     ) as Box<dyn BwTraceConfig>,
+///     ) as Box<dyn RepeatableBwTraceConfig>,
 ///     Box::new(
 ///         StaticBwConfig::new()
 ///             .bw(Bandwidth::from_mbps(24))
 ///             .duration(Duration::from_secs(1)),
-///     ) as Box<dyn BwTraceConfig>,
+///     ) as Box<dyn RepeatableBwTraceConfig>,
 /// ];
 /// let ser = Box::new(RepeatedBwPatternConfig::new().pattern(pat).count(2)) as Box<dyn BwTraceConfig>;
 /// let ser_str = serde_json::to_string(&ser).unwrap();
@@ -418,7 +432,10 @@ pub struct SawtoothBwConfig {
 /// assert_eq!(ser_str, json_str);
 /// ```
 pub struct RepeatedBwPattern {
-    pub pattern: VecDeque<Box<dyn BwTrace>>,
+    pub pattern: Vec<Box<dyn RepeatableBwTrace>>,
+    pub count: usize,
+    current_cycle: usize,
+    current_pattern: usize,
 }
 
 /// The configuration struct for [`RepeatedBwPattern`].
@@ -427,27 +444,25 @@ pub struct RepeatedBwPattern {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
 #[derive(Default, Clone)]
 pub struct RepeatedBwPatternConfig {
-    pub pattern: Vec<Box<dyn BwTraceConfig>>,
+    pub pattern: Vec<Box<dyn RepeatableBwTraceConfig>>,
     pub count: usize,
 }
 
 impl BwTrace for StaticBw {
     fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
-        if let Some(duration) = self.duration.take() {
-            if duration.is_zero() {
-                None
-            } else {
-                Some((self.bw, duration))
-            }
-        } else {
+        if self.current >= self.duration {
             None
+        } else {
+            let step = self.duration - self.current;
+            self.current += step;
+            Some((self.bw, step))
         }
     }
 }
 
 impl BwTrace for NormalizedBw {
     fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
-        if self.duration.is_zero() {
+        if self.current >= self.duration {
             None
         } else {
             let bw = self.sample() as u64;
@@ -458,25 +473,26 @@ impl BwTrace for NormalizedBw {
             if let Some(upper_bound) = self.upper_bound {
                 bw = bw.min(upper_bound);
             }
-            let duration = self.step.min(self.duration);
-            self.duration -= duration;
-            Some((bw, duration))
+            let step = self.step.min(self.duration - self.current);
+            self.current += step;
+            Some((bw, step))
         }
     }
 }
 
 impl BwTrace for SawtoothBw {
     fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
-        if self.duration.is_zero() {
+        if self.current >= self.duration {
             None
         } else {
-            let current = self.current.as_secs_f64();
+            let current_in_cycle = self.current_in_cycle.as_secs_f64();
             let change_point = self.interval.as_secs_f64() * self.duty_ratio;
-            let base_bw = if current < change_point {
-                let ratio = current / change_point;
+            let base_bw = if current_in_cycle < change_point {
+                let ratio = current_in_cycle / change_point;
                 self.bottom + (self.top - self.bottom).mul_f64(ratio)
             } else {
-                let ratio = (current - change_point) / (self.interval.as_secs_f64() - change_point);
+                let ratio = (current_in_cycle - change_point)
+                    / (self.interval.as_secs_f64() - change_point);
                 self.top - (self.top - self.bottom).mul_f64(ratio)
             };
             let mut offset = self.noise.sample(&mut self.rng);
@@ -487,29 +503,66 @@ impl BwTrace for SawtoothBw {
                 offset = offset.max(-(lower_noise_bound.as_bps() as f64));
             }
             let bw = Bandwidth::from_bps((base_bw.as_bps() as f64 + offset) as u64);
-            let duration = self.step.min(self.duration);
-            self.duration -= duration;
-            self.current += duration;
-            if self.current >= self.interval {
-                self.current -= self.interval;
+            let setp = self.step.min(self.duration - self.current);
+            self.current += setp;
+            self.current_in_cycle += setp;
+            if self.current_in_cycle >= self.interval {
+                self.current_in_cycle -= self.interval;
             }
-            Some((bw, duration))
+            Some((bw, setp))
         }
     }
 }
 
 impl BwTrace for RepeatedBwPattern {
     fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
-        if self.pattern.is_empty() {
+        if self.pattern.is_empty() || (self.count != 0 && self.current_cycle >= self.count) {
             None
         } else {
-            match self.pattern[0].next_bw() {
-                Some((bw, duration)) => Some((bw, duration)),
+            match self.pattern[self.current_pattern].next_bw() {
+                Some(bw) => Some(bw),
                 None => {
-                    self.pattern.pop_front();
+                    self.current_pattern += 1;
+                    if self.current_pattern >= self.pattern.len() {
+                        self.current_pattern = 0;
+                        self.current_cycle += 1;
+                        if self.count != 0 && self.current_cycle >= self.count {
+                            return None;
+                        }
+                    }
+                    self.pattern[self.current_pattern].reset();
                     self.next_bw()
                 }
             }
+        }
+    }
+}
+
+impl Resettable for StaticBw {
+    fn reset(&mut self) {
+        self.current = Duration::ZERO;
+    }
+}
+
+impl Resettable for NormalizedBw {
+    fn reset(&mut self) {
+        self.current = Duration::ZERO;
+    }
+}
+
+impl Resettable for SawtoothBw {
+    fn reset(&mut self) {
+        self.current = Duration::ZERO;
+        self.current_in_cycle = Duration::ZERO;
+    }
+}
+
+impl Resettable for RepeatedBwPattern {
+    fn reset(&mut self) {
+        self.current_cycle = 0;
+        self.current_pattern = 0;
+        if !self.pattern.is_empty() {
+            self.pattern[0].reset();
         }
     }
 }
@@ -541,7 +594,8 @@ impl StaticBwConfig {
     pub fn build(self) -> StaticBw {
         StaticBw {
             bw: self.bw.unwrap_or_else(|| Bandwidth::from_mbps(12)),
-            duration: Some(self.duration.unwrap_or_else(|| Duration::from_secs(1))),
+            duration: self.duration.unwrap_or_else(|| Duration::from_secs(1)),
+            current: Duration::ZERO,
         }
     }
 }
@@ -615,6 +669,7 @@ impl NormalizedBwConfig {
         let bw_mean = saturating_bandwidth_as_bps_u64!(mean) as f64;
         let bw_std_dev = saturating_bandwidth_as_bps_u64!(std_dev) as f64;
         let normal: Normal<f64> = Normal::new(bw_mean, bw_std_dev).unwrap();
+        let current = Duration::ZERO;
         NormalizedBw {
             mean,
             std_dev,
@@ -623,6 +678,7 @@ impl NormalizedBwConfig {
             duration,
             step,
             seed,
+            current,
             rng,
             normal,
         }
@@ -711,6 +767,7 @@ impl SawtoothBwConfig {
         let upper_noise_bound = self.upper_noise_bound;
         let lower_noise_bound = self.lower_noise_bound;
         let current = Duration::ZERO;
+        let current_in_cycle = Duration::ZERO;
         let bw_std_dev = saturating_bandwidth_as_bps_u64!(std_dev) as f64;
         let noise: Normal<f64> = Normal::new(0.0, bw_std_dev).unwrap();
         SawtoothBw {
@@ -725,6 +782,7 @@ impl SawtoothBwConfig {
             upper_noise_bound,
             lower_noise_bound,
             current,
+            current_in_cycle,
             rng,
             noise,
         }
@@ -735,11 +793,11 @@ impl RepeatedBwPatternConfig {
     pub fn new() -> Self {
         Self {
             pattern: vec![],
-            count: 1,
+            count: 0,
         }
     }
 
-    pub fn pattern(mut self, pattern: Vec<Box<dyn BwTraceConfig>>) -> Self {
+    pub fn pattern(mut self, pattern: Vec<Box<dyn RepeatableBwTraceConfig>>) -> Self {
         self.pattern = pattern;
         self
     }
@@ -749,13 +807,18 @@ impl RepeatedBwPatternConfig {
         self
     }
 
-    pub fn build(self) -> RepeatedBwPattern {
-        let pattern = vec![self.pattern; self.count]
+    pub fn build(mut self) -> RepeatedBwPattern {
+        let pattern: Vec<Box<dyn RepeatableBwTrace>> = self
+            .pattern
             .drain(..)
-            .flatten()
             .map(|config| config.into_model())
             .collect();
-        RepeatedBwPattern { pattern }
+        RepeatedBwPattern {
+            pattern,
+            count: self.count,
+            current_cycle: 0,
+            current_pattern: 0,
+        }
     }
 }
 
@@ -770,7 +833,23 @@ macro_rules! impl_bw_trace_config {
     };
 }
 
+macro_rules! impl_repeatable_bw_trace_config {
+    ($name:ident) => {
+        #[cfg_attr(feature = "serde", typetag::serde)]
+        impl RepeatableBwTraceConfig for $name {
+            fn into_model(self: Box<$name>) -> Box<dyn RepeatableBwTrace> {
+                Box::new(self.build())
+            }
+        }
+    };
+}
+
 impl_bw_trace_config!(StaticBwConfig);
 impl_bw_trace_config!(NormalizedBwConfig);
 impl_bw_trace_config!(SawtoothBwConfig);
 impl_bw_trace_config!(RepeatedBwPatternConfig);
+
+impl_repeatable_bw_trace_config!(StaticBwConfig);
+impl_repeatable_bw_trace_config!(NormalizedBwConfig);
+impl_repeatable_bw_trace_config!(SawtoothBwConfig);
+impl_repeatable_bw_trace_config!(RepeatedBwPatternConfig);
