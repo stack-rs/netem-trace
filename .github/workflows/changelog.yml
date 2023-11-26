@@ -16,7 +16,7 @@ jobs:
           ACCESS_TOKEN: ${{secrets.CHANGELOG_PAT_STACK}}
           PATH: 'CHANGELOG.md'
           COMMIT_MESSAGE: 'docs(changelog): update release notes'
-          COMMITTER: 'github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>'
+          COMMITTER: 'github-actions[bot] 41898282+github-actions[bot]@users.noreply.github.com'
           TYPE: 'feat:Feature,fix:Bug Fixes,docs:Documentation,refactor:Refactor,perf:Performance Improvements'
           DEFAULT_SCOPE: '*'
 
