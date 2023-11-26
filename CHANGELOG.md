@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [v0.2.1](https://github.com/stack-rs/netem-trace/releases/tag/v0.2.1) - 2023-11-22 09:52:18
+
+Add delay and loss models.
+
+### Feature
+
+- model:
+  - add delay model and loss model ([3e9a6b3](https://github.com/stack-rs/netem-trace/commit/3e9a6b3f0fd08c77d6a7fd01b18d7b61d50a2b2d)) ([#3](https://github.com/stack-rs/netem-trace/pull/3))
+
 ## [v0.2.0](https://github.com/stack-rs/netem-trace/releases/tag/v0.2.0) - 2023-07-28 14:24:59
 
 - add a new model `SawtoothBw` whose waveform is sawtooth.
