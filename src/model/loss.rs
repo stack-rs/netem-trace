@@ -55,7 +55,6 @@
 //! ```
 use crate::{Duration, LossPattern, LossTrace};
 use dyn_clone::DynClone;
-use std::collections::VecDeque;
 
 /// This trait is used to convert a loss trace configuration into a loss trace model.
 ///
@@ -113,6 +112,8 @@ pub struct StaticLossConfig {
 ///
 /// Combines multiple loss trace models into one loss pattern,
 /// and repeat the pattern for `count` times.
+///
+/// If `count` is 0, the pattern will be repeated forever.
 ///
 /// ## Examples
 ///
@@ -177,7 +178,11 @@ pub struct StaticLossConfig {
 /// assert_eq!(ser_str, json_str);
 /// ```
 pub struct RepeatedLossPattern {
-    pub pattern: VecDeque<Box<dyn LossTrace>>,
+    pub pattern: Vec<Box<dyn LossTraceConfig>>,
+    pub count: usize,
+    current_model: Option<Box<dyn LossTrace>>,
+    current_cycle: usize,
+    current_pattern: usize,
 }
 
 /// The configuration struct for [`RepeatedLossPattern`].
@@ -206,13 +211,24 @@ impl LossTrace for StaticLoss {
 
 impl LossTrace for RepeatedLossPattern {
     fn next_loss(&mut self) -> Option<(LossPattern, Duration)> {
-        if self.pattern.is_empty() {
+        if self.pattern.is_empty() || (self.count != 0 && self.current_cycle >= self.count) {
             None
         } else {
-            match self.pattern[0].next_loss() {
-                Some((loss, duration)) => Some((loss, duration)),
+            if self.current_model.is_none() {
+                self.current_model = Some(self.pattern[self.current_pattern].clone().into_model());
+            }
+            match self.current_model.as_mut().unwrap().next_loss() {
+                Some(bw) => Some(bw),
                 None => {
-                    self.pattern.pop_front();
+                    self.current_model = None;
+                    self.current_pattern += 1;
+                    if self.current_pattern >= self.pattern.len() {
+                        self.current_pattern = 0;
+                        self.current_cycle += 1;
+                        if self.count != 0 && self.current_cycle >= self.count {
+                            return None;
+                        }
+                    }
                     self.next_loss()
                 }
             }
@@ -250,7 +266,7 @@ impl RepeatedLossPatternConfig {
     pub fn new() -> Self {
         Self {
             pattern: vec![],
-            count: 1,
+            count: 0,
         }
     }
 
@@ -265,12 +281,13 @@ impl RepeatedLossPatternConfig {
     }
 
     pub fn build(self) -> RepeatedLossPattern {
-        let pattern = vec![self.pattern; self.count]
-            .drain(..)
-            .flatten()
-            .map(|config| config.into_model())
-            .collect();
-        RepeatedLossPattern { pattern }
+        RepeatedLossPattern {
+            pattern: self.pattern,
+            count: self.count,
+            current_model: None,
+            current_cycle: 0,
+            current_pattern: 0,
+        }
     }
 }
 

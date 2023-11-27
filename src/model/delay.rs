@@ -55,7 +55,6 @@
 //! ```
 use crate::{Delay, DelayTrace, Duration};
 use dyn_clone::DynClone;
-use std::collections::VecDeque;
 
 /// This trait is used to convert a delay trace configuration into a delay trace model.
 ///
@@ -117,6 +116,8 @@ pub struct StaticDelayConfig {
 ///
 /// Combines multiple delay trace models into one delay pattern,
 /// and repeat the pattern for `count` times.
+///
+/// If `count` is 0, the pattern will be repeated forever.
 ///
 /// ## Examples
 ///
@@ -181,7 +182,11 @@ pub struct StaticDelayConfig {
 /// assert_eq!(ser_str, json_str);
 /// ```
 pub struct RepeatedDelayPattern {
-    pub pattern: VecDeque<Box<dyn DelayTrace>>,
+    pub pattern: Vec<Box<dyn DelayTraceConfig>>,
+    pub count: usize,
+    current_model: Option<Box<dyn DelayTrace>>,
+    current_cycle: usize,
+    current_pattern: usize,
 }
 
 /// The configuration struct for [`RepeatedDelayPattern`].
@@ -210,13 +215,24 @@ impl DelayTrace for StaticDelay {
 
 impl DelayTrace for RepeatedDelayPattern {
     fn next_delay(&mut self) -> Option<(Delay, Duration)> {
-        if self.pattern.is_empty() {
+        if self.pattern.is_empty() || (self.count != 0 && self.current_cycle >= self.count) {
             None
         } else {
-            match self.pattern[0].next_delay() {
-                Some((delay, duration)) => Some((delay, duration)),
+            if self.current_model.is_none() {
+                self.current_model = Some(self.pattern[self.current_pattern].clone().into_model());
+            }
+            match self.current_model.as_mut().unwrap().next_delay() {
+                Some(bw) => Some(bw),
                 None => {
-                    self.pattern.pop_front();
+                    self.current_model = None;
+                    self.current_pattern += 1;
+                    if self.current_pattern >= self.pattern.len() {
+                        self.current_pattern = 0;
+                        self.current_cycle += 1;
+                        if self.count != 0 && self.current_cycle >= self.count {
+                            return None;
+                        }
+                    }
                     self.next_delay()
                 }
             }
@@ -254,7 +270,7 @@ impl RepeatedDelayPatternConfig {
     pub fn new() -> Self {
         Self {
             pattern: vec![],
-            count: 1,
+            count: 0,
         }
     }
 
@@ -269,12 +285,13 @@ impl RepeatedDelayPatternConfig {
     }
 
     pub fn build(self) -> RepeatedDelayPattern {
-        let pattern = vec![self.pattern; self.count]
-            .drain(..)
-            .flatten()
-            .map(|config| config.into_model())
-            .collect();
-        RepeatedDelayPattern { pattern }
+        RepeatedDelayPattern {
+            pattern: self.pattern,
+            count: self.count,
+            current_model: None,
+            current_cycle: 0,
+            current_pattern: 0,
+        }
     }
 }
 

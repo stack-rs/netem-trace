@@ -59,7 +59,6 @@ use dyn_clone::DynClone;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use rand_distr::{Distribution, Normal};
-use std::collections::VecDeque;
 
 const DEFAULT_RNG_SEED: u64 = 42;
 
@@ -355,6 +354,8 @@ pub struct SawtoothBwConfig {
 /// Combines multiple bandwidth trace models into one bandwidth pattern,
 /// and repeat the pattern for `count` times.
 ///
+/// If `count` is 0, the pattern will be repeated forever.
+///
 /// ## Examples
 ///
 /// The most common use case is to read from a configuration file and
@@ -418,7 +419,11 @@ pub struct SawtoothBwConfig {
 /// assert_eq!(ser_str, json_str);
 /// ```
 pub struct RepeatedBwPattern {
-    pub pattern: VecDeque<Box<dyn BwTrace>>,
+    pub pattern: Vec<Box<dyn BwTraceConfig>>,
+    pub count: usize,
+    current_model: Option<Box<dyn BwTrace>>,
+    current_cycle: usize,
+    current_pattern: usize,
 }
 
 /// The configuration struct for [`RepeatedBwPattern`].
@@ -500,13 +505,24 @@ impl BwTrace for SawtoothBw {
 
 impl BwTrace for RepeatedBwPattern {
     fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
-        if self.pattern.is_empty() {
+        if self.pattern.is_empty() || (self.count != 0 && self.current_cycle >= self.count) {
             None
         } else {
-            match self.pattern[0].next_bw() {
-                Some((bw, duration)) => Some((bw, duration)),
+            if self.current_model.is_none() {
+                self.current_model = Some(self.pattern[self.current_pattern].clone().into_model());
+            }
+            match self.current_model.as_mut().unwrap().next_bw() {
+                Some(bw) => Some(bw),
                 None => {
-                    self.pattern.pop_front();
+                    self.current_model = None;
+                    self.current_pattern += 1;
+                    if self.current_pattern >= self.pattern.len() {
+                        self.current_pattern = 0;
+                        self.current_cycle += 1;
+                        if self.count != 0 && self.current_cycle >= self.count {
+                            return None;
+                        }
+                    }
                     self.next_bw()
                 }
             }
@@ -735,7 +751,7 @@ impl RepeatedBwPatternConfig {
     pub fn new() -> Self {
         Self {
             pattern: vec![],
-            count: 1,
+            count: 0,
         }
     }
 
@@ -750,12 +766,13 @@ impl RepeatedBwPatternConfig {
     }
 
     pub fn build(self) -> RepeatedBwPattern {
-        let pattern = vec![self.pattern; self.count]
-            .drain(..)
-            .flatten()
-            .map(|config| config.into_model())
-            .collect();
-        RepeatedBwPattern { pattern }
+        RepeatedBwPattern {
+            pattern: self.pattern,
+            count: self.count,
+            current_model: None,
+            current_cycle: 0,
+            current_pattern: 0,
+        }
     }
 }
 
