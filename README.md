@@ -98,6 +98,33 @@ let mut c = Box::new(RepeatedBwPatternConfig::new().pattern(a).count(2)).into_mo
 assert_eq!(c.mahimahi(&Duration::from_millis(5)), [1, 2, 3, 4, 5]);
 ```
 
+Load traces in [mahimahi](https://github.com/ravinet/mahimahi) format (`mahimahi` feature should also be enabled):
+
+```rust
+use netem_trace::load_mahimahi_trace;
+use netem_trace::{Bandwidth, BwTrace, Duration};
+let trace = vec![1, 1, 5, 6];
+let mut bw = load_mahimahi_trace(trace, None).unwrap().build();
+// first cycle
+assert_eq!(
+    bw.next_bw(),
+    Some((Bandwidth::from_mbps(24), Duration::from_millis(1)))
+);
+assert_eq!(
+    bw.next_bw(),
+    Some((Bandwidth::from_mbps(0), Duration::from_millis(3)))
+);
+assert_eq!(
+    bw.next_bw(),
+    Some((Bandwidth::from_mbps(12), Duration::from_millis(2)))
+);
+// second cycle
+assert_eq!(
+    bw.next_bw(),
+    Some((Bandwidth::from_mbps(24), Duration::from_millis(1)))
+);
+```
+
 Work with configuration files (`serde` feature should also be enabled):
 
 ```rust
