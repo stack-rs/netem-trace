@@ -90,7 +90,7 @@
 //!
 //! ### Trace Format Features
 //!
-//! - `mahimahi`: Enable this feature if you want to output traces in [mahimahi](https://github.com/ravinet/mahimahi) format.
+//! - `mahimahi`: Enable this feature if you want to load or output traces in [mahimahi](https://github.com/ravinet/mahimahi) format.
 //!
 //! ### Other Features
 //!
@@ -100,7 +100,7 @@
 #[cfg(feature = "mahimahi")]
 pub mod mahimahi;
 #[cfg(feature = "mahimahi")]
-pub use mahimahi::{Mahimahi, MahimahiExt};
+pub use mahimahi::{load_mahimahi_trace, Mahimahi, MahimahiExt};
 
 #[cfg(any(
     feature = "bw-model",
@@ -180,7 +180,6 @@ pub trait LossTrace {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::mahimahi::MahimahiExt;
     use crate::model::{
         BwTraceConfig, NormalizedBwConfig, RepeatedBwPatternConfig, SawtoothBwConfig,
         StaticBwConfig,
@@ -307,40 +306,6 @@ mod test {
             sawtooth_bw.next_bw(),
             Some((Bandwidth::from_bps(14500000), Duration::from_millis(100)))
         );
-    }
-
-    #[test]
-    fn test_mahimahi() {
-        let mut static_bw = StaticBwConfig::new()
-            .bw(Bandwidth::from_mbps(24))
-            .duration(Duration::from_secs(1))
-            .build();
-        assert_eq!(
-            static_bw.mahimahi(&Duration::from_millis(5)),
-            [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]
-        );
-        let mut static_bw = StaticBwConfig::new()
-            .bw(Bandwidth::from_mbps(12))
-            .duration(Duration::from_secs(1))
-            .build();
-        assert_eq!(
-            static_bw.mahimahi_to_string(&Duration::from_millis(5)),
-            "1\n2\n3\n4\n5"
-        );
-        let a = vec![
-            Box::new(
-                StaticBwConfig::new()
-                    .bw(Bandwidth::from_mbps(12))
-                    .duration(Duration::from_secs(1)),
-            ) as Box<dyn BwTraceConfig>,
-            Box::new(
-                StaticBwConfig::new()
-                    .bw(Bandwidth::from_mbps(24))
-                    .duration(Duration::from_secs(1)),
-            ) as Box<dyn BwTraceConfig>,
-        ];
-        let mut c = Box::new(RepeatedBwPatternConfig::new().pattern(a).count(2)).into_model();
-        assert_eq!(c.mahimahi(&Duration::from_millis(5)), [1, 2, 3, 4, 5]);
     }
 
     #[test]
