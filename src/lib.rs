@@ -317,7 +317,7 @@ mod test {
             .build();
         assert_eq!(
             static_bw.mahimahi(&Duration::from_millis(5)),
-            [0, 0, 1, 1, 2, 2, 3, 3, 4, 4]
+            [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]
         );
         let mut static_bw = StaticBwConfig::new()
             .bw(Bandwidth::from_mbps(12))
@@ -325,7 +325,7 @@ mod test {
             .build();
         assert_eq!(
             static_bw.mahimahi_to_string(&Duration::from_millis(5)),
-            "0\n1\n2\n3\n4"
+            "1\n2\n3\n4\n5"
         );
         let a = vec![
             Box::new(
@@ -340,7 +340,7 @@ mod test {
             ) as Box<dyn BwTraceConfig>,
         ];
         let mut c = Box::new(RepeatedBwPatternConfig::new().pattern(a).count(2)).into_model();
-        assert_eq!(c.mahimahi(&Duration::from_millis(5)), [0, 1, 2, 3, 4]);
+        assert_eq!(c.mahimahi(&Duration::from_millis(5)), [1, 2, 3, 4, 5]);
     }
 
     #[test]
