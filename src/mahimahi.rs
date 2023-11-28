@@ -12,12 +12,12 @@
 //!     .bw(Bandwidth::from_mbps(24))
 //!     .duration(Duration::from_secs(1))
 //!     .build();
-//! assert_eq!(static_bw.mahimahi(&Duration::from_millis(5)), [0, 0, 1, 1, 2, 2, 3, 3, 4, 4]);
+//! assert_eq!(static_bw.mahimahi(&Duration::from_millis(5)), [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
 //! let mut static_bw = StaticBwConfig::new()
 //!     .bw(Bandwidth::from_mbps(12))
 //!     .duration(Duration::from_secs(1))
 //!     .build();
-//! assert_eq!(static_bw.mahimahi_to_string(&Duration::from_millis(5)), "0\n1\n2\n3\n4");
+//! assert_eq!(static_bw.mahimahi_to_string(&Duration::from_millis(5)), "1\n2\n3\n4\n5");
 //! ```
 
 use crate::{Bandwidth, BwTrace, Duration};
@@ -51,17 +51,17 @@ pub trait Mahimahi: BwTrace {
     /// Each timestamp represents an opportunity of sending a packet at that timestamp (in milliseconds).
     ///
     /// For example, if the bandwidth is 12Mbps (one packet per millisecond), then the sequence can be:
-    /// \[0, 1, 2, 3, 4\]
+    /// \[1, 2, 3, 4, 5\]
     fn mahimahi(&mut self, total_dur: &Duration) -> Vec<u64> {
-        let mut timestamp = Duration::from_secs(0);
+        let mut timestamp = MAHIMAHI_TS_BIN;
         let mut v = Vec::new();
         let mut transfer = Bandwidth::from_bps(0);
         let mut bin_rem = MAHIMAHI_TS_BIN;
         while let Some((bw, mut dur)) = self.next_bw() {
-            if timestamp >= *total_dur {
+            if timestamp > *total_dur {
                 break;
             }
-            while (timestamp < *total_dur) && !dur.is_zero() {
+            while (timestamp <= *total_dur) && !dur.is_zero() {
                 let bin = bin_rem.min(dur);
                 bin_rem -= bin;
                 dur -= bin;
