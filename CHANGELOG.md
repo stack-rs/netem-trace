@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## [v0.3.0](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.0) - 2023-11-29 17:25:28
+
+*No description*
+
+### Feature
+
+- trace:
+  - add function to load mahimahi trace ([23d443a](https://github.com/stack-rs/netem-trace/commit/23d443a59ab6f97c77e28d56bc47477ca322d06f)) ([#7](https://github.com/stack-rs/netem-trace/pull/7))
+
+- model:
+  - support for infinite loops ([8ac7d50](https://github.com/stack-rs/netem-trace/commit/8ac7d50f14373453e0b429b5eaf472372b089a72)) ([#5](https://github.com/stack-rs/netem-trace/pull/5))
+
+### Bug Fixes
+
+- trace:
+  - start mahimahi trace from zero ([d75eadd](https://github.com/stack-rs/netem-trace/commit/d75eaddfd78e75e7e7bd0e246e0c460f629e5810)) ([#7](https://github.com/stack-rs/netem-trace/pull/7))
+
+### Documentation
+
+- readme:
+  - update contributors ([044932f](https://github.com/stack-rs/netem-trace/commit/044932f6e8ca1e7953a8da7179ff077e1cf5daaa))
+
 ## [v0.2.1](https://github.com/stack-rs/netem-trace/releases/tag/v0.2.1) - 2023-11-22 09:52:18
 
 Add delay and loss models.
