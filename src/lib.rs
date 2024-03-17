@@ -146,7 +146,7 @@ pub type LossPattern = Vec<f64>;
 ///
 /// The next_bw function either returns **the next bandwidth and its duration**
 /// in the sequence, or **None** if the trace goes to end.
-pub trait BwTrace {
+pub trait BwTrace: Send {
     fn next_bw(&mut self) -> Option<(Bandwidth, Duration)>;
 }
 
@@ -161,7 +161,7 @@ pub trait BwTrace {
 ///
 /// The next_delay function either returns **the next delay and its duration**
 /// in the sequence, or **None** if the trace goes to end.
-pub trait DelayTrace {
+pub trait DelayTrace: Send {
     fn next_delay(&mut self) -> Option<(Delay, Duration)>;
 }
 
@@ -173,7 +173,7 @@ pub trait DelayTrace {
 ///
 /// The next_loss function either returns **the next loss_pattern and its duration**
 /// in the sequence, or **None** if the trace goes to end.
-pub trait LossTrace {
+pub trait LossTrace: Send {
     fn next_loss(&mut self) -> Option<(LossPattern, Duration)>;
 }
 

@@ -69,7 +69,7 @@ const DEFAULT_RNG_SEED: u64 = 42;
 /// separate the configuration part into a simple struct for serialization/deserialization, and
 /// construct the model from the configuration.
 #[cfg_attr(feature = "serde", typetag::serde)]
-pub trait BwTraceConfig: DynClone {
+pub trait BwTraceConfig: DynClone + Send {
     fn into_model(self: Box<Self>) -> Box<dyn BwTrace>;
 }
 

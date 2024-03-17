@@ -63,7 +63,7 @@ use dyn_clone::DynClone;
 /// separate the configuration part into a simple struct for serialization/deserialization, and
 /// construct the model from the configuration.
 #[cfg_attr(feature = "serde", typetag::serde)]
-pub trait LossTraceConfig: DynClone {
+pub trait LossTraceConfig: DynClone + Send {
     fn into_model(self: Box<Self>) -> Box<dyn LossTrace>;
 }
 
