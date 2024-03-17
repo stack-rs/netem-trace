@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [v0.3.1](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.1) - 2024-03-17 17:14:06
+
+Add `Send` to trace config and model by @Centaurus99 in [#8](https://github.com/stack-rs/netem-trace/pull/8)
+
+### Feature
+
+- model:
+  - add send to trace config and model ([1a23a01](https://github.com/stack-rs/netem-trace/commit/1a23a01aa05adbf4f253bbca087af6d17cdad0b2)) ([#8](https://github.com/stack-rs/netem-trace/pull/8))
+
 ## [v0.3.0](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.0) - 2023-11-29 17:25:28
 
 *No description*
