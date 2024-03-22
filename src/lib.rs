@@ -79,7 +79,7 @@
 //! }
 //! ```
 //!
-//! This is almost the same as how this library implements the [`StaticBw`] model.
+//! This is almost the same as how this library implements the [`model::StaticBw`] model.
 //!
 //! ## Features
 //!
@@ -179,6 +179,8 @@ pub trait LossTrace: Send {
 
 #[cfg(test)]
 mod test {
+    use self::model::bw::Forever;
+
     use super::*;
     use crate::model::{
         BwTraceConfig, NormalizedBwConfig, RepeatedBwPatternConfig, SawtoothBwConfig,
@@ -335,6 +337,50 @@ mod test {
         assert_eq!(
             model.next_bw(),
             Some((Bandwidth::from_mbps(12), Duration::from_secs(1)))
+        );
+    }
+
+    #[test]
+    fn test_forever() {
+        let mut normal_bw = NormalizedBwConfig::new()
+            .mean(Bandwidth::from_mbps(12))
+            .std_dev(Bandwidth::from_mbps(1))
+            .duration(Duration::from_millis(200))
+            .step(Duration::from_millis(100))
+            .seed(42)
+            .build();
+        assert_eq!(
+            normal_bw.next_bw(),
+            Some((Bandwidth::from_bps(12069427), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            normal_bw.next_bw(),
+            Some((Bandwidth::from_bps(12132938), Duration::from_millis(100)))
+        );
+        assert_eq!(normal_bw.next_bw(), None);
+        let normal_bw_config = NormalizedBwConfig::new()
+            .mean(Bandwidth::from_mbps(12))
+            .std_dev(Bandwidth::from_mbps(1))
+            .duration(Duration::from_millis(200))
+            .step(Duration::from_millis(100))
+            .seed(42);
+        let normal_bw_repeated = normal_bw_config.forever();
+        let mut model = Box::new(normal_bw_repeated).into_model();
+        assert_eq!(
+            model.next_bw(),
+            Some((Bandwidth::from_bps(12069427), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            model.next_bw(),
+            Some((Bandwidth::from_bps(12132938), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            model.next_bw(),
+            Some((Bandwidth::from_bps(12069427), Duration::from_millis(100)))
+        );
+        assert_eq!(
+            model.next_bw(),
+            Some((Bandwidth::from_bps(12132938), Duration::from_millis(100)))
         );
     }
 }

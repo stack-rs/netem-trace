@@ -82,7 +82,7 @@ jobs:
         uses: BobAnkh/clippy-check@master
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --workspace
+          args: --all-targets --all-features --workspace --no-deps
 
   cargo-fmt:
     runs-on: ubuntu-latest

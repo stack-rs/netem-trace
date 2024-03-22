@@ -15,7 +15,8 @@ pub mod bw;
 
 #[cfg(feature = "bw-model")]
 pub use bw::{
-    BwTraceConfig, NormalizedBwConfig, RepeatedBwPatternConfig, SawtoothBwConfig, StaticBwConfig,
+    BwTraceConfig, Forever, NormalizedBwConfig, RepeatedBwPatternConfig, SawtoothBwConfig,
+    StaticBwConfig,
 };
 #[cfg(feature = "bw-model")]
 pub use bw::{NormalizedBw, RepeatedBwPattern, SawtoothBw, StaticBw};

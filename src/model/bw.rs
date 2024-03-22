@@ -791,3 +791,32 @@ impl_bw_trace_config!(StaticBwConfig);
 impl_bw_trace_config!(NormalizedBwConfig);
 impl_bw_trace_config!(SawtoothBwConfig);
 impl_bw_trace_config!(RepeatedBwPatternConfig);
+
+/// Turn a [`BwTraceConfig`] into a forever repeated [`RepeatedBwPatternConfig`].
+pub trait Forever: BwTraceConfig {
+    fn forever(self) -> RepeatedBwPatternConfig;
+}
+
+/// Implement the [`Forever`] trait for the bandwidth trace model config (any struct implements [`BwTraceConfig`]).
+#[macro_export]
+macro_rules! impl_forever {
+    ($name:ident) => {
+        impl Forever for $name {
+            fn forever(self) -> RepeatedBwPatternConfig {
+                RepeatedBwPatternConfig::new()
+                    .pattern(vec![Box::new(self)])
+                    .count(0)
+            }
+        }
+    };
+}
+
+impl_forever!(StaticBwConfig);
+impl_forever!(NormalizedBwConfig);
+impl_forever!(SawtoothBwConfig);
+
+impl Forever for RepeatedBwPatternConfig {
+    fn forever(self) -> RepeatedBwPatternConfig {
+        self.count(0)
+    }
+}
