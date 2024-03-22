@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [v0.3.2](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.2) - 2024-03-22 10:42:34
+
+Add `Forever` trait to make transition into endless model easier
+
+### Feature
+
+- model:
+  - support transition to endless model ([0aa5a68](https://github.com/stack-rs/netem-trace/commit/0aa5a685ade35e462025ac78cac13a9127514319))
+
 ## [v0.3.1](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.1) - 2024-03-17 17:14:06
 
 Add `Send` to trace config and model by @Centaurus99 in [#8](https://github.com/stack-rs/netem-trace/pull/8)
