@@ -33,7 +33,7 @@
 //! // The content would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}"
 //! // if the `human` feature is enabled.
 //! # #[cfg(feature = "human")]
-//! # let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}";
+//! # let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":\"12Mbps\",\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":\"24Mbps\",\"duration\":\"1s\"}}],\"count\":2}}";
 //! let des: Box<dyn BwTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 //! let mut model = des.into_model();
 //! assert_eq!(
@@ -105,6 +105,10 @@ pub struct StaticBw {
 #[derive(Debug, Clone, Default)]
 pub struct StaticBwConfig {
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "human_bandwidth::serde")
+    )]
     pub bw: Option<Bandwidth>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     #[cfg_attr(
@@ -173,12 +177,28 @@ pub struct NormalizedBw {
 #[derive(Debug, Clone, Default)]
 pub struct NormalizedBwConfig {
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "human_bandwidth::serde")
+    )]
     pub mean: Option<Bandwidth>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "human_bandwidth::serde")
+    )]
     pub std_dev: Option<Bandwidth>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "human_bandwidth::serde")
+    )]
     pub upper_bound: Option<Bandwidth>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "human_bandwidth::serde")
+    )]
     pub lower_bound: Option<Bandwidth>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     #[cfg_attr(
@@ -316,8 +336,16 @@ pub struct SawtoothBw {
 #[derive(Debug, Clone, Default)]
 pub struct SawtoothBwConfig {
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "human_bandwidth::serde")
+    )]
     pub bottom: Option<Bandwidth>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "human_bandwidth::serde")
+    )]
     pub top: Option<Bandwidth>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     #[cfg_attr(
@@ -342,10 +370,22 @@ pub struct SawtoothBwConfig {
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub seed: Option<u64>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "human_bandwidth::serde")
+    )]
     pub std_dev: Option<Bandwidth>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "human_bandwidth::serde")
+    )]
     pub upper_noise_bound: Option<Bandwidth>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "human_bandwidth::serde")
+    )]
     pub lower_noise_bound: Option<Bandwidth>,
 }
 
@@ -369,7 +409,7 @@ pub struct SawtoothBwConfig {
 /// // The content would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}"
 /// // if the `human` feature is enabled.
 /// # #[cfg(feature = "human")]
-/// # let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}";
+/// # let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":\"12Mbps\",\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":\"24Mbps\",\"duration\":\"1s\"}}],\"count\":2}}";
 /// let des: Box<dyn BwTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 /// let mut model = des.into_model();
 /// assert_eq!(
@@ -412,10 +452,10 @@ pub struct SawtoothBwConfig {
 /// let ser_str = serde_json::to_string(&ser).unwrap();
 /// # #[cfg(not(feature = "human"))]
 /// let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
-/// // The json string would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}"
+/// // The json string would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":\"12Mbps\",\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":\"24Mbps\",\"duration\":\"1s\"}}],\"count\":2}}"
 /// // if the `human` feature is enabled.
 /// # #[cfg(feature = "human")]
-/// # let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}";
+/// # let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":\"12Mbps\",\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":\"24Mbps\",\"duration\":\"1s\"}}],\"count\":2}}";
 /// assert_eq!(ser_str, json_str);
 /// ```
 pub struct RepeatedBwPattern {
