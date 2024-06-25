@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [v0.3.3](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.3) - 2024-06-25 12:21:00
+
+Add humanized formats of bandwidth to enable a more straightforward configuration
+
+### Feature
+
+- model:
+  - add humanized format for bandwidth ([c81ac1c](https://github.com/stack-rs/netem-trace/commit/c81ac1c4f33e31a32d269feba135ef4f23853343))
+
 ## [v0.3.2](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.2) - 2024-03-22 10:42:34
 
 Add `Forever` trait to make transition into endless model easier
