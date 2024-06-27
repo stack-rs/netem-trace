@@ -30,10 +30,11 @@ serde_json = "1.0"
 
 [features]
 default = ["model"]
-model = ["bw-model", "delay-model", "loss-model"]
+model = ["bw-model", "delay-model", "loss-model", "duplicate-model"]
 bw-model = ["dep:rand", "dep:rand_distr", "dep:once_cell", "dep:dyn-clone"]
 delay-model = ["dep:dyn-clone"]
 loss-model = ["dep:dyn-clone"]
+duplicate-model = ["dep:dyn-clone"]
 serde = ["dep:serde", "dep:typetag", "bandwidth/serde"]
 mahimahi = ["dep:itertools"]
 human = ["serde", "dep:humantime-serde", "dep:human-bandwidth", "human-bandwidth/serde"]
