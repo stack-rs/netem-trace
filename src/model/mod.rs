@@ -1,14 +1,15 @@
-//! This module contains pre-defined models for BwTrace, DelayTrace and LossTrace.
+//! This module contains pre-defined models for BwTrace, DelayTrace, LossTrace and DuplicateTrace.
 //!
 //! A model has two parts: a configuration struct and a model struct.
 //! The configuration struct is used to configure the model and
 //! used for serialization/deserialization if `serde` feature is enabled.
-//! The model struct which implements trait `BwTrace`, `DelayTrace` or `LossTrace`
+//! The model struct which implements trait `BwTrace`, `DelayTrace`, `LossTrace` or `DuplicateTrace`
 //! is used to generate the trace and maintain inner states.
 //!
 //! Enable `bw-model` feature to use the BwTrace models.
 //! Enable `delay-model` feature to use the DelayTrace models.
 //! Enable `loss-model` feature to use the LossTrace models.
+//! Enable `duplicate-model` feature to use the DuplicateTrace models.
 
 #[cfg(feature = "bw-model")]
 pub mod bw;
@@ -36,3 +37,11 @@ pub mod loss;
 pub use loss::{LossTraceConfig, RepeatedLossPatternConfig, StaticLossConfig};
 #[cfg(feature = "loss-model")]
 pub use loss::{RepeatedLossPattern, StaticLoss};
+
+#[cfg(feature = "duplicate-model")]
+pub mod duplicate;
+
+#[cfg(feature = "duplicate-model")]
+pub use duplicate::{DuplicateTraceConfig, RepeatedDuplicatePatternConfig, StaticDuplicateConfig};
+#[cfg(feature = "duplicate-model")]
+pub use duplicate::{RepeatedDuplicatePattern, StaticDuplicate};

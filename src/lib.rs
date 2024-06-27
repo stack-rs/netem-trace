@@ -106,7 +106,8 @@ pub use mahimahi::{load_mahimahi_trace, Mahimahi, MahimahiExt};
     feature = "bw-model",
     feature = "delay-model",
     feature = "loss-model",
-    feature = "model"
+    feature = "duplicate-model",
+    feature = "model",
 ))]
 pub mod model;
 
@@ -134,6 +135,30 @@ pub type Delay = std::time::Duration;
 /// If the packet 101 is lost, then the probability of packet 102 being lost is 0.2.
 /// If the packet 101 is not lost, then the probability of packet 102 being lost is still 0.1.
 pub type LossPattern = Vec<f64>;
+
+/// The duplicate_pattern describes how the packets are duplicated.
+///
+/// The duplicate_pattern is a sequence of conditional probabilities describing how packets are duplicated.
+/// The probability is a f64 between 0 and 1.
+///
+/// The meaning of the duplicate_pattern sequence is:
+///
+/// - The probability on index 0 describes how likely a packet will be duplicated
+/// **if the previous packet was transmitted normally**.
+/// - The probability on index 1 describes how likely a packet will be duplicated
+/// **if the previous packet was duplicated**.
+/// - ...
+///
+/// For example, if the duplicate_pattern is [0.8, 0.1], and packet 100 is not duplicated, then the
+/// probability of packet 101 being duplicated is 0.8.
+///
+/// If the packet 101 is duplicated, the the probability of packet 102 being duplicated is 0.1; if
+/// the packet 101 is not duplicated, then the probability of packet 102 being duplicated is still 0.8.
+///
+/// If both packet 101 and 102 were duplicated, then the probability of packet 103 being duplicated
+/// is still 0.1, and as long as the packets were duplicated, the propability of the next packet
+/// being duplicated is always the last element - in this case, 0.1.
+pub type DuplicatePattern = Vec<f64>;
 
 /// This is a trait that represents a trace of bandwidths.
 ///
@@ -175,6 +200,18 @@ pub trait DelayTrace: Send {
 /// in the sequence, or **None** if the trace goes to end.
 pub trait LossTrace: Send {
     fn next_loss(&mut self) -> Option<(LossPattern, Duration)>;
+}
+
+/// This is a trait that represents a trace of duplicate patterns.
+///
+/// The trace is a sequence of `(duplicate_pattern, duration)` pairs.
+/// The duplicate_pattern describes how packets are duplicated when going through.
+/// The duration is the time that the duplicate_pattern lasts.
+///
+/// The next_duplicate function either returns **the next duplicate_pattern and its duration** in
+/// the sequence, or **None** if the trace goes to end.
+pub trait DuplicateTrace: Send {
+    fn next_duplicate(&mut self) -> Option<(DuplicatePattern, Duration)>;
 }
 
 #[cfg(test)]
