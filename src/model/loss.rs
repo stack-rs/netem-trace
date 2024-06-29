@@ -110,7 +110,7 @@ pub struct StaticLossConfig {
 
 /// The model contains an array of loss trace models.
 ///
-/// Combines multiple loss trace models into one loss pattern,
+/// Combine multiple loss trace models into one loss pattern,
 /// and repeat the pattern for `count` times.
 ///
 /// If `count` is 0, the pattern will be repeated forever.
