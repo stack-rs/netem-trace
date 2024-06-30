@@ -182,10 +182,9 @@ mod test {
     use self::model::bw::Forever;
 
     use super::*;
-    use crate::model::{
-        BwTraceConfig, NormalizedBwConfig, RepeatedBwPatternConfig, SawtoothBwConfig,
-        StaticBwConfig,
-    };
+    #[cfg(feature = "serde")]
+    use crate::model::RepeatedBwPatternConfig;
+    use crate::model::{BwTraceConfig, NormalizedBwConfig, SawtoothBwConfig, StaticBwConfig};
 
     #[test]
     fn test_static_bw_model() {
@@ -311,6 +310,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "serde")]
     fn test_model_serde() {
         let a = vec![
             Box::new(

@@ -325,6 +325,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "serde")]
     fn test_serde() {
         let a = vec![
             Box::new(
