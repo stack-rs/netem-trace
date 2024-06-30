@@ -114,7 +114,7 @@ pub struct StaticDelayConfig {
 
 /// The model contains an array of delay trace models.
 ///
-/// Combines multiple delay trace models into one delay pattern,
+/// Combine multiple delay trace models into one delay pattern,
 /// and repeat the pattern for `count` times.
 ///
 /// If `count` is 0, the pattern will be repeated forever.

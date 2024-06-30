@@ -391,7 +391,7 @@ pub struct SawtoothBwConfig {
 
 /// The model contains an array of bandwidth trace models.
 ///
-/// Combines multiple bandwidth trace models into one bandwidth pattern,
+/// Combine multiple bandwidth trace models into one bandwidth pattern,
 /// and repeat the pattern for `count` times.
 ///
 /// If `count` is 0, the pattern will be repeated forever.
