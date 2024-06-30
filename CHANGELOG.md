@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## [v0.3.4](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.4) - 2024-06-30 08:37:28
+
+## What's Changed
+
+* add packet duplicate models by @un-lock-able in https://github.com/stack-rs/netem-trace/pull/11
+* fix typos in comments by @un-lock-able in https://github.com/stack-rs/netem-trace/pull/12
+
+## New Contributors
+
+* @un-lock-able made their first contribution in https://github.com/stack-rs/netem-trace/pull/11
+
+### Feature
+
+- model:
+  - add packet duplicate models ([dedcb15](https://github.com/stack-rs/netem-trace/commit/dedcb15b180db3043fbf901d7b31358e0c347032)) ([#11](https://github.com/stack-rs/netem-trace/pull/11))
+
+### Documentation
+
+- readme:
+  - correct the examples ([fa5fd48](https://github.com/stack-rs/netem-trace/commit/fa5fd48752c686e05cec3998c8d3385b25c0a4a6))
+
 ## [v0.3.3](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.3) - 2024-06-25 12:21:00
 
 Add humanized formats of bandwidth to enable a more straightforward configuration
