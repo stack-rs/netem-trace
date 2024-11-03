@@ -860,3 +860,76 @@ impl Forever for RepeatedBwPatternConfig {
         self.count(0)
     }
 }
+
+
+
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
+#[derive(Debug, Clone, Default)]
+pub struct TraceBwConfig {
+    pub pattern: Vec<(Duration, Vec<Bandwidth>)>,
+    pub repeated: bool,
+}
+
+impl TraceBwConfig {
+    pub fn new() -> Self {
+        Self {
+            pattern: vec![],
+            repeated: true,
+        }
+    }
+    pub fn pattern(mut self: Self, pattern: Vec<(Duration, Vec<Bandwidth>)>) -> Self {
+        self.pattern = pattern;
+        self
+    }
+    pub fn repeated(mut self: Self, repeated: bool) -> Self {
+        self.repeated = repeated;
+        self
+    }
+    pub fn build(self) -> TraceBw {
+        TraceBw {
+            pattern: self
+                .pattern
+                .into_iter()
+                .filter(|(_, bandwidths)| bandwidths.len() > 0)
+                .collect(),
+            repeated: self.repeated,
+            index1: 0,
+            index2: 0,
+        }
+    }
+}
+
+pub struct TraceBw {
+    pattern: Vec<(Duration, Vec<Bandwidth>)>, // inner vector is never empty
+    repeated: bool,
+    index1: usize,
+    index2: usize,
+}
+
+impl BwTrace for TraceBw {
+    fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
+        let result = self
+            .pattern
+            .get(self.index1)
+            .map(|(duration, bandwidth)| {
+                bandwidth
+                    .get(self.index2)
+                    .map(|bandwidth| (*bandwidth, *duration))
+            })
+            .flatten();
+        if result.is_some() {
+            if self.pattern[self.index1].1.len() > self.index2 + 1 {
+                self.index2 = self.index2 + 1;
+            } else {
+                self.index1 += 1;
+                self.index2 = 0;
+            }
+            if self.repeated && self.index1 >= self.pattern.len() {
+                self.index1 = 0;
+            }
+        }
+        result
+    }
+}
+
+impl_bw_trace_config!(TraceBwConfig);

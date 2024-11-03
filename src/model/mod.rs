@@ -17,10 +17,10 @@ pub mod bw;
 #[cfg(feature = "bw-model")]
 pub use bw::{
     BwTraceConfig, Forever, NormalizedBwConfig, RepeatedBwPatternConfig, SawtoothBwConfig,
-    StaticBwConfig,
+    StaticBwConfig, TraceBwConfig
 };
 #[cfg(feature = "bw-model")]
-pub use bw::{NormalizedBw, RepeatedBwPattern, SawtoothBw, StaticBw};
+pub use bw::{NormalizedBw, RepeatedBwPattern, SawtoothBw, StaticBw, TraceBw};
 
 #[cfg(feature = "delay-model")]
 pub mod delay;
