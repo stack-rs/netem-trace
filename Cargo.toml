@@ -24,6 +24,8 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 typetag = { version = "0.2.5", optional = true }
 humantime-serde = { version = "1.1.1", optional = true }
 human-bandwidth = { version = "0.1.1", optional = true }
+statrs = { version = "0.17.1", optional = true}
+
 
 [dev-dependencies]
 serde_json = "1.0"
@@ -39,6 +41,7 @@ serde = ["dep:serde", "dep:typetag", "bandwidth/serde"]
 mahimahi = ["dep:itertools"]
 human = ["serde", "dep:humantime-serde", "dep:human-bandwidth", "human-bandwidth/serde"]
 full = ["model", "mahimahi", "human"]
+truncated-normal = ["statrs"]
 
 [package.metadata.docs.rs]
 all-features = true

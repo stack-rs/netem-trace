@@ -78,6 +78,9 @@ dyn_clone::clone_trait_object!(BwTraceConfig);
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "truncated-normal")]
+use super::solve_truncate::solve;
+
 /// The model of a static bandwidth trace.
 ///
 /// ## Examples
@@ -861,8 +864,6 @@ impl Forever for RepeatedBwPatternConfig {
     }
 }
 
-
-
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
 #[derive(Debug, Clone, Default)]
 pub struct TraceBwConfig {
@@ -877,11 +878,11 @@ impl TraceBwConfig {
             repeated: true,
         }
     }
-    pub fn pattern(mut self: Self, pattern: Vec<(Duration, Vec<Bandwidth>)>) -> Self {
+    pub fn pattern(mut self, pattern: Vec<(Duration, Vec<Bandwidth>)>) -> Self {
         self.pattern = pattern;
         self
     }
-    pub fn repeated(mut self: Self, repeated: bool) -> Self {
+    pub fn repeated(mut self, repeated: bool) -> Self {
         self.repeated = repeated;
         self
     }
@@ -890,7 +891,7 @@ impl TraceBwConfig {
             pattern: self
                 .pattern
                 .into_iter()
-                .filter(|(_, bandwidths)| bandwidths.len() > 0)
+                .filter(|(_, bandwidths)| !bandwidths.is_empty())
                 .collect(),
             repeated: self.repeated,
             index1: 0,
@@ -911,15 +912,14 @@ impl BwTrace for TraceBw {
         let result = self
             .pattern
             .get(self.index1)
-            .map(|(duration, bandwidth)| {
+            .and_then(|(duration, bandwidth)| {
                 bandwidth
                     .get(self.index2)
                     .map(|bandwidth| (*bandwidth, *duration))
-            })
-            .flatten();
+            });
         if result.is_some() {
             if self.pattern[self.index1].1.len() > self.index2 + 1 {
-                self.index2 = self.index2 + 1;
+                self.index2 += 1;
             } else {
                 self.index1 += 1;
                 self.index2 = 0;
@@ -933,3 +933,28 @@ impl BwTrace for TraceBw {
 }
 
 impl_bw_trace_config!(TraceBwConfig);
+
+#[cfg(feature = "truncated-normal")]
+impl NormalizedBwConfig {
+    // if no solution was found, then None
+    pub fn build_truncated(mut self) -> NormalizedBw {
+        let mean = self
+            .mean
+            .unwrap_or_else(|| Bandwidth::from_mbps(12))
+            .as_gbps_f64();
+        let sigma = self
+            .std_dev
+            .unwrap_or_else(|| Bandwidth::from_mbps(0))
+            .as_gbps_f64()
+            / mean;
+        let lower = self
+            .lower_bound
+            .unwrap_or_else(|| Bandwidth::from_mbps(0))
+            .as_gbps_f64()
+            / mean;
+        let upper = self.upper_bound.map(|upper| upper.as_gbps_f64() / mean);
+        let new_mean = mean * solve(1f64, sigma, Some(lower), upper).unwrap_or(1f64);
+        self.mean = Some(Bandwidth::from_gbps_f64(new_mean));
+        self.build()
+    }
+}
