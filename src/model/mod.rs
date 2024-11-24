@@ -48,3 +48,6 @@ pub use duplicate::{RepeatedDuplicatePattern, StaticDuplicate};
 
 #[cfg(feature = "truncated-normal")]
 pub mod solve_truncate;
+
+#[cfg(feature = "serde")]
+pub mod trace_serde;
