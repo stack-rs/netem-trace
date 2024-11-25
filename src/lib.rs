@@ -144,9 +144,9 @@ pub type LossPattern = Vec<f64>;
 /// The meaning of the duplicate_pattern sequence is:
 ///
 /// - The probability on index 0 describes how likely a packet will be duplicated
-/// **if the previous packet was transmitted normally**.
+///   **if the previous packet was transmitted normally**.
 /// - The probability on index 1 describes how likely a packet will be duplicated
-/// **if the previous packet was duplicated**.
+///   **if the previous packet was duplicated**.
 /// - ...
 ///
 /// For example, if the duplicate_pattern is [0.8, 0.1], and packet 100 is not duplicated, then the
