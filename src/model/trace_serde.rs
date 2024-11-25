@@ -1,3 +1,11 @@
+//! This module provides a compat serialization and deserialization for `TraceBwConfig`.
+//!
+//!
+//! Enable `serde` feature to use this module.
+//!
+//! Use example can be found in the doc of `TraceBwConfig`.
+//!  
+
 use super::TraceBwConfig;
 use bandwidth::Bandwidth;
 use serde::de::{SeqAccess, Visitor};

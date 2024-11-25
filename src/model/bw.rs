@@ -820,6 +820,7 @@ impl NormalizedBwConfig {
     /// ## Examples
     ///
     /// ```
+    ///
     /// # use netem_trace::model::NormalizedBwConfig;
     /// # use netem_trace::{Bandwidth, Duration, BwTrace};
     /// # use crate::netem_trace::model::Forever;
@@ -842,6 +843,21 @@ impl NormalizedBwConfig {
     ///
     /// assert_eq!(avg_mbps(default_build), 12.974758080079994); // significantly higher than the expected mean
     /// assert_eq!(avg_mbps(truncate_build), 11.97642456625989);
+    ///
+    /// let normal_bw = NormalizedBwConfig::new()
+    ///     .mean(Bandwidth::from_mbps(12))
+    ///     .std_dev(Bandwidth::from_mbps(12))
+    ///     .duration(Duration::from_secs(100))
+    ///     .lower_bound(Bandwidth::from_mbps(8))
+    ///     .upper_bound(Bandwidth::from_mbps(20))
+    ///     .step(Duration::from_millis(1))
+    ///     .seed(42);
+    ///
+    /// let mut default_build = normal_bw.clone().build();
+    /// let mut truncate_build = normal_bw.clone().build_truncated();
+    ///
+    /// assert_eq!(avg_mbps(default_build),  13.221356471729928); // significantly higher than the expected mean
+    /// assert_eq!(avg_mbps(truncate_build), 11.978819427569897);
     ///
     /// ```
     ///

@@ -1,3 +1,15 @@
+//! This module provides the `solve` function to solve the following problem:
+//!
+//! Given a lowerbound (default 0) and an upperbound (defaunt +inf) and the std_dev of a normal distribution,
+//! find out a center of the distribution, such that the mathmetical expectation of the distribution (after
+//! truncated by the given lower and upper bound) equals an expected value that is between the lower and upper
+//! bound.
+//!
+//! Enable `truncated-normal` feature to use this module.
+//!
+//! Use example can be found in the doc of `model::bw::NormalizedBwConfig::build_truncated`.
+//!  
+
 use statrs::function::erf::erf;
 use std::f64::consts::PI;
 
