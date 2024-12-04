@@ -216,6 +216,8 @@ pub trait DuplicateTrace: Send {
 
 #[cfg(test)]
 mod test {
+    use model::TraceBwConfig;
+
     use self::model::bw::Forever;
 
     use super::*;
@@ -344,6 +346,48 @@ mod test {
             sawtooth_bw.next_bw(),
             Some((Bandwidth::from_bps(14500000), Duration::from_millis(100)))
         );
+    }
+
+    #[test]
+    fn test_trace_bw() {
+        let mut trace_bw = TraceBwConfig::new()
+            .pattern(vec![
+                (
+                    Duration::from_millis(1),
+                    vec![
+                        Bandwidth::from_kbps(29123),
+                        Bandwidth::from_kbps(41242),
+                        Bandwidth::from_kbps(7395),
+                    ],
+                ),
+                (
+                    Duration::from_millis(2),
+                    vec![Bandwidth::from_mbps(1), Bandwidth::from_kbps(8542)],
+                ),
+            ])
+            .build();
+
+        assert_eq!(
+            trace_bw.next_bw(),
+            Some((Bandwidth::from_bps(29123000), Duration::from_millis(1)))
+        );
+        assert_eq!(
+            trace_bw.next_bw(),
+            Some((Bandwidth::from_bps(41242000), Duration::from_millis(1)))
+        );
+        assert_eq!(
+            trace_bw.next_bw(),
+            Some((Bandwidth::from_bps(7395000), Duration::from_millis(1)))
+        );
+        assert_eq!(
+            trace_bw.next_bw(),
+            Some((Bandwidth::from_bps(1000000), Duration::from_millis(2)))
+        );
+        assert_eq!(
+            trace_bw.next_bw(),
+            Some((Bandwidth::from_bps(8542000), Duration::from_millis(2)))
+        );
+        assert_eq!(trace_bw.next_bw(), None);
     }
 
     #[test]

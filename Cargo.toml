@@ -25,10 +25,11 @@ typetag = { version = "0.2.5", optional = true }
 humantime-serde = { version = "1.1.1", optional = true }
 human-bandwidth = { version = "0.1.1", optional = true }
 statrs = { version = "0.17.1", optional = true}
-
+serde_json = { version = "1.0", optional = true }
 
 [dev-dependencies]
 serde_json = "1.0"
+
 
 [features]
 default = ["model"]
@@ -39,8 +40,8 @@ loss-model = ["dep:dyn-clone"]
 duplicate-model = ["dep:dyn-clone"]
 serde = ["dep:serde", "dep:typetag", "bandwidth/serde"]
 mahimahi = ["dep:itertools"]
-human = ["serde", "dep:humantime-serde", "dep:human-bandwidth", "human-bandwidth/serde"]
-full = ["model", "mahimahi", "human"]
+human = ["serde", "dep:humantime-serde", "dep:human-bandwidth", "human-bandwidth/serde", "serde_json"]
+full = ["model", "mahimahi", "human", "truncated-normal"]
 truncated-normal = ["statrs"]
 
 [package.metadata.docs.rs]
