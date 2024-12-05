@@ -100,7 +100,7 @@ fn cdf(t: f64, avg: f64, sigma: f64) -> f64 {
 /// As `truncated_band_width` is calculated in addicative parts, here calculates the derivative of it in
 /// addicative parts, part by part.
 ///  
-fn deri_truncated_band_width(avg: f64, sigma: f64, lower: Option<f64>, upper: Option<f64>) -> f64 {
+fn deri_truncated_bandwidth(avg: f64, sigma: f64, lower: Option<f64>, upper: Option<f64>) -> f64 {
     let upper_integral = if let Some(upper) = upper {
         deri_integral(avg, upper, sigma)
     } else {
@@ -236,7 +236,7 @@ pub fn solve(x: f64, sigma: f64, mut lower: Option<f64>, upper: Option<f64>) -> 
             run_cnt -= 1;
         }
 
-        result = result - (f_x - x) / deri_truncated_band_width(result, sigma, lower, upper);
+        result = result - (f_x - x) / deri_truncated_bandwidth(result, sigma, lower, upper);
     }
 
     Some(result)
@@ -281,21 +281,21 @@ mod tests {
 
         test_deri(
             |x| truncated_band_width(x, 3.0, None, None),
-            |x| deri_truncated_band_width(x, 3.0, None, None),
+            |x| deri_truncated_bandwidth(x, 3.0, None, None),
             0.0,
             10.0,
         );
 
         test_deri(
             |x| truncated_band_width(x, 3.0, Some(3.0), None),
-            |x| deri_truncated_band_width(x, 3.0, Some(3.0), None),
+            |x| deri_truncated_bandwidth(x, 3.0, Some(3.0), None),
             0.0,
             10.0,
         );
 
         test_deri(
             |x| truncated_band_width(x, 3.0, Some(3.0), Some(20.0)),
-            |x| deri_truncated_band_width(x, 3.0, Some(3.0), Some(20.0)),
+            |x| deri_truncated_bandwidth(x, 3.0, Some(3.0), Some(20.0)),
             0.0,
             10.0,
         );

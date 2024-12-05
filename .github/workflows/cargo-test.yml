@@ -87,7 +87,7 @@ jobs:
         uses: Swatinem/rust-cache@v1
       - name: cargo test
         run: |
-          cargo build --features mahimahi && cargo test --no-fail-fast --verbose --features mahimahi --features serde
+          cargo test --no-fail-fast --verbose --features mahimahi --features serde
           
 
   cargo-test-truncated-normal:
@@ -107,4 +107,4 @@ jobs:
         uses: Swatinem/rust-cache@v1
       - name: cargo test
         run: |
-          cargo build --features truncated-normal && cargo test --no-fail-fast --verbose --features truncated-normal --features serde
+          cargo test --no-fail-fast --verbose --features truncated-normal --features serde

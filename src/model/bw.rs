@@ -550,16 +550,16 @@ pub struct RepeatedBwPatternConfig {
 ///
 /// let error_duration_example = r##"{"RepeatedBwPatternConfig":{"pattern":[{"TraceBwConfig":[["1ts",["2Mbps 234kbps","4Mbps"]],["2ms",["1Mbps"]]]}],"count":0}}"##;
 /// let err = serde_json::from_str::<Box<dyn BwTraceConfig>>(error_duration_example)
-/// .map(|_| ())
-/// .unwrap_err();
+///     .map(|_| ())
+///     .unwrap_err();
 /// // "Failed to parse duration '1ts': unknown time unit \"ts\", supported units: ns, us, ms, sec, min, hours, days, weeks, months, years (and few variations) at line 1 column 91"
 /// #[cfg(feature = "human")]
 /// assert!(err.to_string().contains("1ts"));
 ///
 /// let error_bandwidth_example = r##"{"RepeatedBwPatternConfig":{"pattern":[{"TraceBwConfig":[["1ms",["2Mbps 234lbps","4Mbps"]],["2ms",["1Mbps"]]]}],"count":0}}"##;
 /// let err = serde_json::from_str::<Box<dyn BwTraceConfig>>(error_bandwidth_example)
-/// .map(|_| ())
-/// .unwrap_err();
+///     .map(|_| ())
+///     .unwrap_err();
 /// // "Failed to parse bandwidth '2Mbps 234lbps': unknown bandwidth unit \"lbps\", supported units: bps, kbps, Mbps, Gbps, Tbps at line 1 column 91"
 /// #[cfg(feature = "human")]
 /// assert!(err.to_string().contains("2Mbps 234lbps"));
@@ -1013,7 +1013,6 @@ impl NormalizedBwConfig {
     /// assert_eq!(avg_mbps(truncate_build), 11.978819427569897);
     ///
     /// ```
-    ///
     pub fn build_truncated(mut self) -> NormalizedBw {
         let mean = self
             .mean
