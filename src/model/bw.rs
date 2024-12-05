@@ -610,21 +610,12 @@ impl Serialize for TraceBwConfig {
     {
         let mut seq = serializer.serialize_seq(Some(self.pattern.len()))?;
         for (duration, bandwidths) in &self.pattern {
-            let mut tuple = Vec::new();
-
             let time = humantime_serde::re::humantime::format_duration(*duration).to_string();
-
-            tuple.push(serde_json::to_value(time).unwrap());
-
             let bandwidths = bandwidths
                 .iter()
                 .map(|item| human_bandwidth::format_bandwidth(*item).to_string())
                 .collect::<Vec<_>>();
-
-            // bandwidth_seq.end().map_err(serde::ser::Error::custom)?;
-            tuple.push(serde_json::to_value(bandwidths).map_err(serde::ser::Error::custom)?);
-
-            seq.serialize_element(&tuple)?;
+            seq.serialize_element(&(time, bandwidths))?;
         }
         Ok(seq.end().unwrap())
     }
