@@ -1,25 +1,26 @@
 # CHANGELOG
 
-## [v0.3.4](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.4) - 2024-06-30 08:37:28
+## [v0.3.5](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.5) - 2024-12-06 05:17:25
 
 ## What's Changed
-
-* add packet duplicate models by @un-lock-able in https://github.com/stack-rs/netem-trace/pull/11
-* fix typos in comments by @un-lock-able in https://github.com/stack-rs/netem-trace/pull/12
+* Support TraceBwConfig model to replay any bandwidth trace by @Lethe10137 in https://github.com/stack-rs/netem-trace/pull/13
 
 ## New Contributors
+* @Lethe10137 made their first contribution in https://github.com/stack-rs/netem-trace/pull/13
 
-* @un-lock-able made their first contribution in https://github.com/stack-rs/netem-trace/pull/11
+**Full Changelog**: https://github.com/stack-rs/netem-trace/compare/v0.3.4...v0.3.5
 
 ### Feature
 
 - model:
-  - add packet duplicate models ([dedcb15](https://github.com/stack-rs/netem-trace/commit/dedcb15b180db3043fbf901d7b31358e0c347032)) ([#11](https://github.com/stack-rs/netem-trace/pull/11))
+  - add bandwidth trace replay model (#13) ([1cd2019](https://github.com/stack-rs/netem-trace/commit/1cd20192da9660b1195a5bb0de108de5ba316079)) ([#13](https://github.com/stack-rs/netem-trace/pull/13))
 
 ### Documentation
 
 - readme:
-  - correct the examples ([fa5fd48](https://github.com/stack-rs/netem-trace/commit/fa5fd48752c686e05cec3998c8d3385b25c0a4a6))
+  - update contributors ([9b221cf](https://github.com/stack-rs/netem-trace/commit/9b221cf713c3142dbc30af00d86f66b26f70500c))
+
+## [v0.3.4](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.4) - 2024-06-30 08:37:28
 
 ## [v0.3.3](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.3) - 2024-06-25 12:21:00
 
