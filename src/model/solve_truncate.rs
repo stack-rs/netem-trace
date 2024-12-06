@@ -41,7 +41,7 @@ use std::f64::consts::PI;
 /// 3. $$lower \times cdf(lower, avg, sigma)$$
 ///
 ///
-fn truncated_band_width(avg: f64, sigma: f64, lower: Option<f64>, upper: Option<f64>) -> f64 {
+fn truncated_bandwidth(avg: f64, sigma: f64, lower: Option<f64>, upper: Option<f64>) -> f64 {
     //upper_integral - lower_integral is the integral described in the doc, which is part 1 of the calculation.
     let upper_integral = if let Some(upper) = upper {
         integral(avg, upper, sigma)
@@ -76,7 +76,7 @@ fn truncated_band_width(avg: f64, sigma: f64, lower: Option<f64>, upper: Option<
 /// An indefinite integral:
 ///     $$\int t \times \text{pdf}(t, \text{avg}, \text{sigma} ) \ \text dt $$
 ///
-/// Used in `truncated_band_width`.
+/// Used in `truncated_bandwidth`.
 ///
 fn integral(avg: f64, t: f64, sigma: f64) -> f64 {
     let part1 = avg * 0.5f64 * erf((t - avg) / sigma / 2.0_f64.sqrt());
@@ -89,15 +89,15 @@ fn integral(avg: f64, t: f64, sigma: f64) -> f64 {
 /// The cumulative distribution function of a normal distribution,
 ///     whose center is avg and standard derivation is sigma, with respect to t
 ///
-/// Used in `truncated_band_width`.
+/// Used in `truncated_bandwidth`.
 ///
 ///
 fn cdf(t: f64, avg: f64, sigma: f64) -> f64 {
     0.5f64 * (1f64 + erf((t - avg) / sigma / 2f64.sqrt()))
 }
 
-/// The derivative of `truncated_band_width` with respect to `avg`.
-/// As `truncated_band_width` is calculated in addicative parts, here calculates the derivative of it in
+/// The derivative of `truncated_bandwidth` with respect to `avg`.
+/// As `truncated_bandwidth` is calculated in addicative parts, here calculates the derivative of it in
 /// addicative parts, part by part.
 ///  
 fn deri_truncated_bandwidth(avg: f64, sigma: f64, lower: Option<f64>, upper: Option<f64>) -> f64 {
@@ -132,7 +132,7 @@ fn deri_truncated_bandwidth(avg: f64, sigma: f64, lower: Option<f64>, upper: Opt
 /// Patial derivative of the following respect to `avg`.
 ///     $$\int t \times \text{pdf}(t, \text{avg}, \text{sigma} ) \ \text dt $$
 ///
-/// Used in `derivative_truncated_band_width`.
+/// Used in `derivative_truncated_bandwidth`.
 ///
 fn deri_integral(avg: f64, t: f64, sigma: f64) -> f64 {
     let part1 = 0.5f64 * erf((t - avg) / sigma / 2.0_f64.sqrt());
@@ -145,7 +145,7 @@ fn deri_integral(avg: f64, t: f64, sigma: f64) -> f64 {
 /// Patial derivative of the following respect to `avg`.
 ///     cdf(t, avg, sigma)
 ///
-/// Used in `derivative_truncated_band_width`.
+/// Used in `derivative_truncated_bandwidth`.
 ///
 fn deri_cdf(t: f64, avg: f64, sigma: f64) -> f64 {
     -(-(t - avg) * (t - avg) / 2.0f64 / sigma / sigma).exp() / sigma / (2.0f64 * PI).sqrt()
@@ -226,7 +226,7 @@ pub fn solve(x: f64, sigma: f64, mut lower: Option<f64>, upper: Option<f64>) -> 
     let mut run_cnt = 10;
 
     while run_cnt > 0 {
-        let f_x = truncated_band_width(result, sigma, lower, upper);
+        let f_x = truncated_bandwidth(result, sigma, lower, upper);
 
         let diff = (f_x - x).abs();
         if diff < last_diff {
@@ -273,28 +273,28 @@ mod tests {
     }
 
     #[test]
-    fn test_truncated_band_width() {
+    fn test_truncated_bandwidth() {
         assert_eq!(
-            truncated_band_width(10.0, 5.0, None, None),
+            truncated_bandwidth(10.0, 5.0, None, None),
             10.042453513094314
         );
 
         test_deri(
-            |x| truncated_band_width(x, 3.0, None, None),
+            |x| truncated_bandwidth(x, 3.0, None, None),
             |x| deri_truncated_bandwidth(x, 3.0, None, None),
             0.0,
             10.0,
         );
 
         test_deri(
-            |x| truncated_band_width(x, 3.0, Some(3.0), None),
+            |x| truncated_bandwidth(x, 3.0, Some(3.0), None),
             |x| deri_truncated_bandwidth(x, 3.0, Some(3.0), None),
             0.0,
             10.0,
         );
 
         test_deri(
-            |x| truncated_band_width(x, 3.0, Some(3.0), Some(20.0)),
+            |x| truncated_bandwidth(x, 3.0, Some(3.0), Some(20.0)),
             |x| deri_truncated_bandwidth(x, 3.0, Some(3.0), Some(20.0)),
             0.0,
             10.0,
