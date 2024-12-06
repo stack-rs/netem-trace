@@ -30,7 +30,7 @@ jobs:
         uses: Swatinem/rust-cache@v1
       - name: cargo test
         run: |
-          cargo test --no-fail-fast --verbose --features mahimahi --features serde
+          cargo test --no-fail-fast --verbose --features mahimahi --features serde --features truncated-normal
 
   cargo-test-full:
     runs-on: ubuntu-latest
@@ -50,3 +50,61 @@ jobs:
       - name: cargo test
         run: |
           cargo test --no-fail-fast --verbose --features full
+
+  cargo-test-serde:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            override: true
+            components: rustfmt, clippy
+      - name: deal with rust cache
+        uses: Swatinem/rust-cache@v1
+      - name: cargo test
+        run: |
+          cargo test --no-fail-fast --verbose --features serde
+
+  cargo-test-mahimahi:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            override: true
+            components: rustfmt, clippy
+      - name: deal with rust cache
+        uses: Swatinem/rust-cache@v1
+      - name: cargo test
+        run: |
+          cargo test --no-fail-fast --verbose --features mahimahi --features serde
+          
+
+  cargo-test-truncated-normal:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            override: true
+            components: rustfmt, clippy
+      - name: deal with rust cache
+        uses: Swatinem/rust-cache@v1
+      - name: cargo test
+        run: |
+          cargo test --no-fail-fast --verbose --features truncated-normal --features serde

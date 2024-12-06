@@ -17,10 +17,10 @@ pub mod bw;
 #[cfg(feature = "bw-model")]
 pub use bw::{
     BwTraceConfig, Forever, NormalizedBwConfig, RepeatedBwPatternConfig, SawtoothBwConfig,
-    StaticBwConfig,
+    StaticBwConfig, TraceBwConfig,
 };
 #[cfg(feature = "bw-model")]
-pub use bw::{NormalizedBw, RepeatedBwPattern, SawtoothBw, StaticBw};
+pub use bw::{NormalizedBw, RepeatedBwPattern, SawtoothBw, StaticBw, TraceBw};
 
 #[cfg(feature = "delay-model")]
 pub mod delay;
@@ -45,3 +45,6 @@ pub mod duplicate;
 pub use duplicate::{DuplicateTraceConfig, RepeatedDuplicatePatternConfig, StaticDuplicateConfig};
 #[cfg(feature = "duplicate-model")]
 pub use duplicate::{RepeatedDuplicatePattern, StaticDuplicate};
+
+#[cfg(feature = "truncated-normal")]
+pub mod solve_truncate;

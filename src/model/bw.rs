@@ -76,7 +76,12 @@ pub trait BwTraceConfig: DynClone + Send {
 dyn_clone::clone_trait_object!(BwTraceConfig);
 
 #[cfg(feature = "serde")]
+use serde::ser::SerializeSeq;
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "truncated-normal")]
+use super::solve_truncate::solve;
 
 /// The model of a static bandwidth trace.
 ///
@@ -476,6 +481,271 @@ pub struct RepeatedBwPatternConfig {
     pub count: usize,
 }
 
+/// This model is used to enable a more compact trace.
+///
+/// ## Examples
+///
+/// ```
+/// # use netem_trace::model::TraceBwConfig;
+/// # use netem_trace::{Bandwidth, Duration, BwTrace};
+/// use crate::netem_trace::model::Forever;
+/// use netem_trace::model::BwTraceConfig;
+///
+/// let mut tracebw = TraceBwConfig::new().pattern(
+///     vec![
+///         (Duration::from_millis(1), vec![Bandwidth::from_mbps(2),Bandwidth::from_mbps(4),]),
+///         (Duration::from_millis(2), vec![Bandwidth::from_mbps(1)]),
+///        ]
+/// ).build();
+///
+/// assert_eq!(tracebw.next_bw(), Some((Bandwidth::from_mbps(2), Duration::from_millis(1))));
+/// assert_eq!(tracebw.next_bw(), Some((Bandwidth::from_mbps(4), Duration::from_millis(1))));
+/// assert_eq!(tracebw.next_bw(), Some((Bandwidth::from_mbps(1), Duration::from_millis(2))));
+/// assert_eq!(tracebw.next_bw(), None);
+/// assert_eq!(tracebw.next_bw(), None);
+/// assert_eq!(tracebw.next_bw(), None);
+///
+/// let repeated_tracebw_config = TraceBwConfig::new().pattern(
+///     vec![
+///         (Duration::from_millis(1), vec![Bandwidth::from_mbps(2),Bandwidth::from_mbps(4),]),
+///         (Duration::from_millis(2), vec![Bandwidth::from_mbps(1)]),
+///        ]
+/// ).forever();
+///
+/// let mut repeated_tracebw = repeated_tracebw_config.clone().build();
+///
+/// assert_eq!(repeated_tracebw.next_bw(), Some((Bandwidth::from_mbps(2), Duration::from_millis(1))));
+/// assert_eq!(repeated_tracebw.next_bw(), Some((Bandwidth::from_mbps(4), Duration::from_millis(1))));
+/// assert_eq!(repeated_tracebw.next_bw(), Some((Bandwidth::from_mbps(1), Duration::from_millis(2))));
+///
+/// assert_eq!(repeated_tracebw.next_bw(), Some((Bandwidth::from_mbps(2), Duration::from_millis(1))));
+/// assert_eq!(repeated_tracebw.next_bw(), Some((Bandwidth::from_mbps(4), Duration::from_millis(1))));
+/// assert_eq!(repeated_tracebw.next_bw(), Some((Bandwidth::from_mbps(1), Duration::from_millis(2))));
+///
+/// assert_eq!(repeated_tracebw.next_bw(), Some((Bandwidth::from_mbps(2), Duration::from_millis(1))));
+/// assert_eq!(repeated_tracebw.next_bw(), Some((Bandwidth::from_mbps(4), Duration::from_millis(1))));
+/// assert_eq!(repeated_tracebw.next_bw(), Some((Bandwidth::from_mbps(1), Duration::from_millis(2))));
+///  
+///
+/// let boxed_config : Box<dyn BwTraceConfig> = Box::new(repeated_tracebw_config);
+/// let json_trace = serde_json::to_string(&boxed_config).unwrap();
+///
+/// #[cfg(feature = "human")]
+/// let expected ="{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"TraceBwConfig\":[[\"1ms\",[\"2Mbps\",\"4Mbps\"]],[\"2ms\",[\"1Mbps\"]]]}],\"count\":0}}";
+/// #[cfg(not(feature = "human"))]
+/// let expected ="{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"TraceBwConfig\":[[1.0,[2.0,4.0]],[2.0,[1.0]]]}],\"count\":0}}";
+/// assert_eq!(json_trace , expected);
+///
+/// let des: Box<dyn BwTraceConfig> = serde_json::from_str(json_trace.as_str()).unwrap();
+/// let mut model = des.into_model();
+///
+/// assert_eq!(model.next_bw(), Some((Bandwidth::from_mbps(2), Duration::from_millis(1))));
+/// assert_eq!(model.next_bw(), Some((Bandwidth::from_mbps(4), Duration::from_millis(1))));
+/// assert_eq!(model.next_bw(), Some((Bandwidth::from_mbps(1), Duration::from_millis(2))));
+///
+/// assert_eq!(model.next_bw(), Some((Bandwidth::from_mbps(2), Duration::from_millis(1))));
+/// assert_eq!(model.next_bw(), Some((Bandwidth::from_mbps(4), Duration::from_millis(1))));
+/// assert_eq!(model.next_bw(), Some((Bandwidth::from_mbps(1), Duration::from_millis(2))));
+///
+///
+/// let error_duration_example = r##"{"RepeatedBwPatternConfig":{"pattern":[{"TraceBwConfig":[["1ts",["2Mbps 234kbps","4Mbps"]],["2ms",["1Mbps"]]]}],"count":0}}"##;
+/// let err = serde_json::from_str::<Box<dyn BwTraceConfig>>(error_duration_example)
+///     .map(|_| ())
+///     .unwrap_err();
+/// // "Failed to parse duration '1ts': unknown time unit \"ts\", supported units: ns, us, ms, sec, min, hours, days, weeks, months, years (and few variations) at line 1 column 91"
+/// #[cfg(feature = "human")]
+/// assert!(err.to_string().contains("1ts"));
+///
+/// let error_bandwidth_example = r##"{"RepeatedBwPatternConfig":{"pattern":[{"TraceBwConfig":[["1ms",["2Mbps 234lbps","4Mbps"]],["2ms",["1Mbps"]]]}],"count":0}}"##;
+/// let err = serde_json::from_str::<Box<dyn BwTraceConfig>>(error_bandwidth_example)
+///     .map(|_| ())
+///     .unwrap_err();
+/// // "Failed to parse bandwidth '2Mbps 234lbps': unknown bandwidth unit \"lbps\", supported units: bps, kbps, Mbps, Gbps, Tbps at line 1 column 91"
+/// #[cfg(feature = "human")]
+/// assert!(err.to_string().contains("2Mbps 234lbps"));
+/// ```
+pub struct TraceBw {
+    pub pattern: Vec<(Duration, Vec<Bandwidth>)>, // inner vector is never empty
+    pub outer_index: usize,
+    pub inner_index: usize,
+}
+
+/// The configuration struct for [`TraceBw`].
+///
+/// See [`TraceBw`] for more details.
+///
+#[derive(Debug, Clone, Default)]
+pub struct TraceBwConfig {
+    pub pattern: Vec<(Duration, Vec<Bandwidth>)>,
+}
+
+impl TraceBwConfig {
+    pub fn new() -> Self {
+        Self { pattern: vec![] }
+    }
+    pub fn pattern(mut self, pattern: Vec<(Duration, Vec<Bandwidth>)>) -> Self {
+        self.pattern = pattern;
+        self
+    }
+
+    pub fn build(self) -> TraceBw {
+        TraceBw {
+            pattern: self
+                .pattern
+                .into_iter()
+                .filter(|(_, bandwidths)| !bandwidths.is_empty())
+                .collect(),
+            outer_index: 0,
+            inner_index: 0,
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for TraceBwConfig {
+    #[cfg(feature = "human")]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(self.pattern.len()))?;
+        for (duration, bandwidths) in &self.pattern {
+            let time = humantime_serde::re::humantime::format_duration(*duration).to_string();
+            let bandwidths = bandwidths
+                .iter()
+                .map(|item| human_bandwidth::format_bandwidth(*item).to_string())
+                .collect::<Vec<_>>();
+            seq.serialize_element(&(time, bandwidths))?;
+        }
+        Ok(seq.end().unwrap())
+    }
+
+    #[cfg(not(feature = "human"))]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(self.pattern.len()))?;
+        for (duration, bandwidths) in &self.pattern {
+            let duration_ms_f64 = duration.as_secs_f64() * 1000f64;
+            let bandwidth_mbps_f64: Vec<f64> = bandwidths
+                .iter()
+                .map(|b| b.as_gbps_f64() * 1000f64)
+                .collect();
+            seq.serialize_element(&(duration_ms_f64, bandwidth_mbps_f64))?;
+        }
+        Ok(seq.end().unwrap())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for TraceBwConfig {
+    #[cfg(feature = "human")]
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct TraceBwConfigVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for TraceBwConfigVisitor {
+            type Value = TraceBwConfig;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a sequence of [str, [str, str, ...]]")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                let mut pattern = Vec::new();
+
+                while let Some((duration_str, bandwidths_str)) =
+                    seq.next_element::<(&str, Vec<&str>)>()?
+                {
+                    let duration = humantime_serde::re::humantime::parse_duration(duration_str)
+                        .map_err(|e| {
+                            serde::de::Error::custom(format!(
+                                "Failed to parse duration '{}': {}",
+                                duration_str, e
+                            ))
+                        })?;
+
+                    let bandwidths = bandwidths_str
+                        .into_iter()
+                        .map(|b| {
+                            human_bandwidth::parse_bandwidth(b).map_err(|e| {
+                                serde::de::Error::custom(format!(
+                                    "Failed to parse bandwidth '{}': {}",
+                                    b, e
+                                ))
+                            })
+                        })
+                        .collect::<Result<Vec<_>, _>>()?;
+                    pattern.push((duration, bandwidths));
+                }
+                Ok(TraceBwConfig { pattern })
+            }
+        }
+
+        deserializer.deserialize_seq(TraceBwConfigVisitor)
+    }
+
+    #[cfg(not(feature = "human"))]
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct TraceBwConfigVisitor;
+        impl<'de> serde::de::Visitor<'de> for TraceBwConfigVisitor {
+            type Value = TraceBwConfig;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a sequence of [f64, [f64, f64, ...]]")
+            }
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                let mut pattern = Vec::new();
+                while let Some((duration_ms_f64, bandwidths_mbps_f64)) =
+                    seq.next_element::<(f64, Vec<f64>)>()?
+                {
+                    let duration = Duration::from_secs_f64(duration_ms_f64 / 1000f64);
+                    let bandwidths = bandwidths_mbps_f64
+                        .into_iter()
+                        .map(|b| Bandwidth::from_gbps_f64(b * 0.001))
+                        .collect();
+                    pattern.push((duration, bandwidths));
+                }
+                Ok(TraceBwConfig { pattern })
+            }
+        }
+        deserializer.deserialize_seq(TraceBwConfigVisitor)
+    }
+}
+
+impl BwTrace for TraceBw {
+    fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
+        let result = self
+            .pattern
+            .get(self.outer_index)
+            .and_then(|(duration, bandwidth)| {
+                bandwidth
+                    .get(self.inner_index)
+                    .map(|bandwidth| (*bandwidth, *duration))
+            });
+        if result.is_some() {
+            if self.pattern[self.outer_index].1.len() > self.inner_index + 1 {
+                self.inner_index += 1;
+            } else {
+                self.outer_index += 1;
+                self.inner_index = 0;
+            }
+        }
+        result
+    }
+}
+
 impl BwTrace for StaticBw {
     fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
         if let Some(duration) = self.duration.take() {
@@ -685,6 +955,77 @@ impl NormalizedBwConfig {
     }
 }
 
+#[cfg(feature = "truncated-normal")]
+impl NormalizedBwConfig {
+    /// This is another implementation for converting NormalizedBwConfig into NormalizedBw, where the impact
+    /// of truncation (`lower_bound` and `upper_bound` field) on the mathematical expectation of the distribution
+    /// is taking account by modifing the center of the distribution.
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    ///
+    /// # use netem_trace::model::NormalizedBwConfig;
+    /// # use netem_trace::{Bandwidth, Duration, BwTrace};
+    /// # use crate::netem_trace::model::Forever;
+    /// let normal_bw = NormalizedBwConfig::new()
+    ///     .mean(Bandwidth::from_mbps(12))
+    ///     .std_dev(Bandwidth::from_mbps(12))
+    ///     .duration(Duration::from_secs(100))
+    ///     .step(Duration::from_millis(1))
+    ///     .seed(42);
+    ///
+    /// let mut default_build = normal_bw.clone().build();
+    /// let mut truncate_build = normal_bw.clone().build_truncated();
+    ///
+    /// fn avg_mbps(mut model: impl BwTrace) -> f64{
+    ///     let mut count = 0;
+    ///     std::iter::from_fn( move ||{
+    ///         model.next_bw().map(|b| b.0.as_gbps_f64() * 1000.0)
+    ///     }).inspect(|_| count += 1).sum::<f64>() / count as f64
+    /// }
+    ///
+    /// assert_eq!(avg_mbps(default_build), 12.974758080079994); // significantly higher than the expected mean
+    /// assert_eq!(avg_mbps(truncate_build), 11.97642456625989);
+    ///
+    /// let normal_bw = NormalizedBwConfig::new()
+    ///     .mean(Bandwidth::from_mbps(12))
+    ///     .std_dev(Bandwidth::from_mbps(12))
+    ///     .duration(Duration::from_secs(100))
+    ///     .lower_bound(Bandwidth::from_mbps(8))
+    ///     .upper_bound(Bandwidth::from_mbps(20))
+    ///     .step(Duration::from_millis(1))
+    ///     .seed(42);
+    ///
+    /// let mut default_build = normal_bw.clone().build();
+    /// let mut truncate_build = normal_bw.clone().build_truncated();
+    ///
+    /// assert_eq!(avg_mbps(default_build),  13.221356471729928); // significantly higher than the expected mean
+    /// assert_eq!(avg_mbps(truncate_build), 11.978819427569897);
+    ///
+    /// ```
+    pub fn build_truncated(mut self) -> NormalizedBw {
+        let mean = self
+            .mean
+            .unwrap_or_else(|| Bandwidth::from_mbps(12))
+            .as_gbps_f64();
+        let sigma = self
+            .std_dev
+            .unwrap_or_else(|| Bandwidth::from_mbps(0))
+            .as_gbps_f64()
+            / mean;
+        let lower = self
+            .lower_bound
+            .unwrap_or_else(|| Bandwidth::from_mbps(0))
+            .as_gbps_f64()
+            / mean;
+        let upper = self.upper_bound.map(|upper| upper.as_gbps_f64() / mean);
+        let new_mean = mean * solve(1f64, sigma, Some(lower), upper).unwrap_or(1f64);
+        self.mean = Some(Bandwidth::from_gbps_f64(new_mean));
+        self.build()
+    }
+}
+
 impl SawtoothBwConfig {
     pub fn new() -> Self {
         Self {
@@ -831,6 +1172,7 @@ impl_bw_trace_config!(StaticBwConfig);
 impl_bw_trace_config!(NormalizedBwConfig);
 impl_bw_trace_config!(SawtoothBwConfig);
 impl_bw_trace_config!(RepeatedBwPatternConfig);
+impl_bw_trace_config!(TraceBwConfig);
 
 /// Turn a [`BwTraceConfig`] into a forever repeated [`RepeatedBwPatternConfig`].
 pub trait Forever: BwTraceConfig {
@@ -854,6 +1196,7 @@ macro_rules! impl_forever {
 impl_forever!(StaticBwConfig);
 impl_forever!(NormalizedBwConfig);
 impl_forever!(SawtoothBwConfig);
+impl_forever!(TraceBwConfig);
 
 impl Forever for RepeatedBwPatternConfig {
     fn forever(self) -> RepeatedBwPatternConfig {
