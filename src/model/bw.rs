@@ -565,9 +565,9 @@ pub struct RepeatedBwPatternConfig {
 /// assert!(err.to_string().contains("2Mbps 234lbps"));
 /// ```
 pub struct TraceBw {
-    pattern: Vec<(Duration, Vec<Bandwidth>)>, // inner vector is never empty
-    index1: usize,
-    index2: usize,
+    pub pattern: Vec<(Duration, Vec<Bandwidth>)>, // inner vector is never empty
+    pub outer_index: usize,
+    pub inner_index: usize,
 }
 
 /// The configuration struct for [`TraceBw`].
@@ -595,8 +595,8 @@ impl TraceBwConfig {
                 .into_iter()
                 .filter(|(_, bandwidths)| !bandwidths.is_empty())
                 .collect(),
-            index1: 0,
-            index2: 0,
+            outer_index: 0,
+            inner_index: 0,
         }
     }
 }
@@ -728,18 +728,18 @@ impl BwTrace for TraceBw {
     fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
         let result = self
             .pattern
-            .get(self.index1)
+            .get(self.outer_index)
             .and_then(|(duration, bandwidth)| {
                 bandwidth
-                    .get(self.index2)
+                    .get(self.inner_index)
                     .map(|bandwidth| (*bandwidth, *duration))
             });
         if result.is_some() {
-            if self.pattern[self.index1].1.len() > self.index2 + 1 {
-                self.index2 += 1;
+            if self.pattern[self.outer_index].1.len() > self.inner_index + 1 {
+                self.inner_index += 1;
             } else {
-                self.index1 += 1;
-                self.index2 = 0;
+                self.outer_index += 1;
+                self.inner_index = 0;
             }
         }
         result
