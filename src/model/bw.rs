@@ -661,20 +661,21 @@ impl<'de> Deserialize<'de> for TraceBwConfig {
                 let mut pattern = Vec::new();
 
                 while let Some((duration_str, bandwidths_str)) =
-                    seq.next_element::<(&str, Vec<&str>)>()?
+                    seq.next_element::<(String, Vec<String>)>()?
                 {
-                    let duration = humantime_serde::re::humantime::parse_duration(duration_str)
-                        .map_err(|e| {
-                            serde::de::Error::custom(format!(
-                                "Failed to parse duration '{}': {}",
-                                duration_str, e
-                            ))
-                        })?;
+                    let duration =
+                        humantime_serde::re::humantime::parse_duration(duration_str.as_str())
+                            .map_err(|e| {
+                                serde::de::Error::custom(format!(
+                                    "Failed to parse duration '{}': {}",
+                                    duration_str, e
+                                ))
+                            })?;
 
                     let bandwidths = bandwidths_str
                         .into_iter()
                         .map(|b| {
-                            human_bandwidth::parse_bandwidth(b).map_err(|e| {
+                            human_bandwidth::parse_bandwidth(&b).map_err(|e| {
                                 serde::de::Error::custom(format!(
                                     "Failed to parse bandwidth '{}': {}",
                                     b, e
