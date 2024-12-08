@@ -2,23 +2,6 @@
 
 ## [v0.3.6](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.6) - 2024-12-08 16:04:14
 
-## What's Changed
-
-* fix(model): resolve deserialization issue with figment by @Lethe10137 in https://github.com/stack-rs/netem-trace/pull/15
-
-
-**Full Changelog**: https://github.com/stack-rs/netem-trace/compare/v0.3.5...v0.3.6
-
-### Bug Fixes
-
-- model:
-  - resolve deserialization issue with figment (#15) ([752f52b](https://github.com/stack-rs/netem-trace/commit/752f52b39169d8e5d4c3e42ec3c5ed3c67a9bcbd)) ([#15](https://github.com/stack-rs/netem-trace/pull/15))
-
-### Documentation
-
-- readme:
-  - update contributors ([dd37e9c](https://github.com/stack-rs/netem-trace/commit/dd37e9cdaa842472788c32c06cee5394fbe44b89))
-
 ## [v0.3.5](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.5) - 2024-12-06 05:17:25
 
 ## [v0.3.4](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.4) - 2024-06-30 08:37:28
