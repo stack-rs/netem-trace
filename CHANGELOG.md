@@ -1,24 +1,25 @@
 # CHANGELOG
 
-## [v0.3.5](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.5) - 2024-12-06 05:17:25
+## [v0.3.6](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.6) - 2024-12-08 16:04:14
 
 ## What's Changed
-* Support TraceBwConfig model to replay any bandwidth trace by @Lethe10137 in https://github.com/stack-rs/netem-trace/pull/13
 
-## New Contributors
-* @Lethe10137 made their first contribution in https://github.com/stack-rs/netem-trace/pull/13
+* fix(model): resolve deserialization issue with figment by @Lethe10137 in https://github.com/stack-rs/netem-trace/pull/15
 
-**Full Changelog**: https://github.com/stack-rs/netem-trace/compare/v0.3.4...v0.3.5
 
-### Feature
+**Full Changelog**: https://github.com/stack-rs/netem-trace/compare/v0.3.5...v0.3.6
+
+### Bug Fixes
 
 - model:
-  - add bandwidth trace replay model (#13) ([1cd2019](https://github.com/stack-rs/netem-trace/commit/1cd20192da9660b1195a5bb0de108de5ba316079)) ([#13](https://github.com/stack-rs/netem-trace/pull/13))
+  - resolve deserialization issue with figment (#15) ([752f52b](https://github.com/stack-rs/netem-trace/commit/752f52b39169d8e5d4c3e42ec3c5ed3c67a9bcbd)) ([#15](https://github.com/stack-rs/netem-trace/pull/15))
 
 ### Documentation
 
 - readme:
-  - update contributors ([9b221cf](https://github.com/stack-rs/netem-trace/commit/9b221cf713c3142dbc30af00d86f66b26f70500c))
+  - update contributors ([dd37e9c](https://github.com/stack-rs/netem-trace/commit/dd37e9cdaa842472788c32c06cee5394fbe44b89))
+
+## [v0.3.5](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.5) - 2024-12-06 05:17:25
 
 ## [v0.3.4](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.4) - 2024-06-30 08:37:28
 
