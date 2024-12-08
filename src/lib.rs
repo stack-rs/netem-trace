@@ -464,4 +464,76 @@ mod test {
             Some((Bandwidth::from_bps(12132938), Duration::from_millis(100)))
         );
     }
+
+    #[test]
+    #[cfg(feature = "human")]
+    fn test_compatibility_with_figment() {
+        use figment::{
+            providers::{Format, Json},
+            Figment,
+        };
+
+        let config = r##"
+    {
+"RepeatedBwPatternConfig": {
+    "pattern": [
+        {"TraceBwConfig": [["25ms",["10Mbps", "20Mbps"]],["2ms",["11Mbps", "23Mbps"]]]},
+        {"SawtoothBwConfig": {
+                "bottom" : "10Mbps",
+                "top" : "20Mbps",
+                "step" : "1ms",
+                "interval" : "10ms",
+                "duty_ratio" : 0.5
+            }
+        }
+    ],
+    "count": 0
+}
+}
+"##;
+
+        let trace: Box<dyn BwTraceConfig> = Figment::new()
+            .merge(Json::string(config))
+            .extract()
+            .unwrap();
+
+        let mut model = trace.into_model();
+
+        assert_eq!(
+            model.next_bw(),
+            Some((Bandwidth::from_mbps(10), Duration::from_millis(25)))
+        );
+        assert_eq!(
+            model.next_bw(),
+            Some((Bandwidth::from_mbps(20), Duration::from_millis(25)))
+        );
+        assert_eq!(
+            model.next_bw(),
+            Some((Bandwidth::from_mbps(11), Duration::from_millis(2)))
+        );
+        assert_eq!(
+            model.next_bw(),
+            Some((Bandwidth::from_mbps(23), Duration::from_millis(2)))
+        );
+        assert_eq!(
+            model.next_bw(),
+            Some((Bandwidth::from_mbps(10), Duration::from_millis(1)))
+        );
+        assert_eq!(
+            model.next_bw(),
+            Some((Bandwidth::from_mbps(12), Duration::from_millis(1)))
+        );
+        assert_eq!(
+            model.next_bw(),
+            Some((Bandwidth::from_mbps(14), Duration::from_millis(1)))
+        );
+        assert_eq!(
+            model.next_bw(),
+            Some((Bandwidth::from_mbps(16), Duration::from_millis(1)))
+        );
+        assert_eq!(
+            model.next_bw(),
+            Some((Bandwidth::from_mbps(18), Duration::from_millis(1)))
+        );
+    }
 }
