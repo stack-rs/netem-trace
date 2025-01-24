@@ -476,23 +476,42 @@ mod test {
         };
 
         let config = r##"
-    {
-"RepeatedBwPatternConfig": {
-    "pattern": [
-        {"TraceBwConfig": [["25ms",["10Mbps", "20Mbps"]],["2ms",["11Mbps", "23Mbps"]]]},
-        {"SawtoothBwConfig": {
-                "bottom" : "10Mbps",
-                "top" : "20Mbps",
-                "step" : "1ms",
-                "interval" : "10ms",
-                "duty_ratio" : 0.5
+{
+   "RepeatedBwPatternConfig":{
+      "pattern":[
+         {
+            "TraceBwConfig":{
+               "pattern":[
+                  [
+                     "25ms",
+                     [
+                        "10Mbps",
+                        "20Mbps"
+                     ]
+                  ],
+                  [
+                     "2ms",
+                     [
+                        "11Mbps",
+                        "23Mbps"
+                     ]
+                  ]
+               ]
             }
-        }
-    ],
-    "count": 0
-}
-}
-"##;
+         },
+         {
+            "SawtoothBwConfig":{
+               "bottom":"10Mbps",
+               "top":"20Mbps",
+               "step":"1ms",
+               "interval":"10ms",
+               "duty_ratio":0.5
+            }
+         }
+      ],
+      "count":0
+   }
+}"##;
 
         let trace: Box<dyn BwTraceConfig> = Figment::new()
             .merge(Json::string(config))

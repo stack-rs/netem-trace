@@ -77,8 +77,6 @@ pub trait BwTraceConfig: DynClone + Send {
 dyn_clone::clone_trait_object!(BwTraceConfig);
 
 #[cfg(feature = "serde")]
-use serde::ser::SerializeSeq;
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "truncated-normal")]
@@ -533,11 +531,11 @@ pub struct RepeatedBwPatternConfig {
 /// let ser_str = serde_json::to_string(&ser).unwrap();
 ///
 /// # #[cfg(feature = "human")]
-/// let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"TraceBwConfig\":[[\"1ms\",[\"2Mbps\",\"4Mbps\"]],[\"2ms\",[\"1Mbps\"]]]}],\"count\":0}}";
-/// // The json string would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"TraceBwConfig\":[[1.0,[2.0,4.0]],[2.0,[1.0]]]}],\"count\":0}}"
+/// let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"TraceBwConfig\":{\"pattern\":[[\"1ms\",[\"2Mbps\",\"4Mbps\"]],[\"2ms\",[\"1Mbps\"]]]}}],\"count\":0}}";
+/// // The json string would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"TraceBwConfig\":{\"pattern\":[[{\"secs\":0,\"nanos\":1000000},[{\"gbps\":0,\"bps\":2000000},{\"gbps\":0,\"bps\":4000000}]],[{\"secs\":0,\"nanos\":2000000},[{\"gbps\":0,\"bps\":1000000}]]]}}],\"count\":0}}"
 /// // if the `human` feature is not enabled.
 /// #[cfg(not(feature = "human"))]
-/// let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"TraceBwConfig\":[[1.0,[2.0,4.0]],[2.0,[1.0]]]}],\"count\":0}}";
+/// let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"TraceBwConfig\":{\"pattern\":[[{\"secs\":0,\"nanos\":1000000},[{\"gbps\":0,\"bps\":2000000},{\"gbps\":0,\"bps\":4000000}]],[{\"secs\":0,\"nanos\":2000000},[{\"gbps\":0,\"bps\":1000000}]]]}}],\"count\":0}}";
 /// assert_eq!(ser_str, json_str);
 ///
 /// let des: Box<dyn BwTraceConfig> = serde_json::from_str(json_str).unwrap();
@@ -561,8 +559,13 @@ pub struct TraceBw {
 ///
 /// See [`TraceBw`] for more details.
 ///
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
 #[derive(Debug, Clone, Default)]
 pub struct TraceBwConfig {
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "tracebw_serde")
+    )]
     pub pattern: Vec<(Duration, Vec<Bandwidth>)>,
 }
 
@@ -570,6 +573,7 @@ impl TraceBwConfig {
     pub fn new() -> Self {
         Self { pattern: vec![] }
     }
+
     pub fn pattern(mut self, pattern: Vec<(Duration, Vec<Bandwidth>)>) -> Self {
         self.pattern = pattern;
         self
@@ -588,127 +592,165 @@ impl TraceBwConfig {
     }
 }
 
-#[cfg(feature = "serde")]
-impl Serialize for TraceBwConfig {
-    #[cfg(feature = "human")]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+#[cfg(all(feature = "serde", feature = "human"))]
+mod tracebw_serde {
+    use super::*;
+    use serde::ser::SerializeSeq;
+    use serde::{de, ser, Deserialize, Deserializer, Serialize, Serializer};
+    use std::fmt;
+    use std::ops::{Deref, DerefMut};
+    /// Deserializes a `Bandwidth` in human-readable format.
+    ///
+    /// This function can be used with `serde_derive`'s `with` and
+    /// `deserialize_with` annotations.
+    pub fn deserialize<'a, T, D>(d: D) -> Result<T, D::Error>
     where
-        S: serde::Serializer,
+        Serde<T>: Deserialize<'a>,
+        D: Deserializer<'a>,
     {
-        let mut seq = serializer.serialize_seq(Some(self.pattern.len()))?;
-        for (duration, bandwidths) in &self.pattern {
-            let time = humantime_serde::re::humantime::format_duration(*duration).to_string();
-            let bandwidths = bandwidths
-                .iter()
-                .map(|item| human_bandwidth::format_bandwidth(*item).to_string())
-                .collect::<Vec<_>>();
-            seq.serialize_element(&(time, bandwidths))?;
-        }
-        Ok(seq.end().unwrap())
+        Serde::deserialize(d).map(Serde::into_inner)
     }
 
-    #[cfg(not(feature = "human"))]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    /// Serializes a `Bandwidth` in human-readable format.
+    ///
+    /// This function can be used with `serde_derive`'s `with` and
+    /// `serialize_with` annotations.
+    pub fn serialize<T, S>(d: &T, s: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer,
+        for<'a> Serde<&'a T>: Serialize,
+        S: Serializer,
     {
-        let mut seq = serializer.serialize_seq(Some(self.pattern.len()))?;
-        for (duration, bandwidths) in &self.pattern {
-            let duration_ms_f64 = duration.as_secs_f64() * 1000f64;
-            let bandwidth_mbps_f64: Vec<f64> = bandwidths
-                .iter()
-                .map(|b| b.as_gbps_f64() * 1000f64)
-                .collect();
-            seq.serialize_element(&(duration_ms_f64, bandwidth_mbps_f64))?;
-        }
-        Ok(seq.end().unwrap())
+        Serde::from(d).serialize(s)
     }
-}
 
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for TraceBwConfig {
-    #[cfg(feature = "human")]
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    /// A wrapper type which implements `Serialize` and `Deserialize` for
+    /// types involving `Bandwidth`.
+    #[derive(Copy, Clone, Eq, Hash, PartialEq)]
+    pub struct Serde<T>(T);
+
+    impl<T> fmt::Debug for Serde<T>
     where
-        D: serde::Deserializer<'de>,
+        T: fmt::Debug,
     {
-        struct TraceBwConfigVisitor;
+        fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+            self.0.fmt(formatter)
+        }
+    }
 
-        impl<'de> serde::de::Visitor<'de> for TraceBwConfigVisitor {
-            type Value = TraceBwConfig;
+    impl<T> Deref for Serde<T> {
+        type Target = T;
 
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("a sequence of [str, [str, str, ...]]")
-            }
+        fn deref(&self) -> &T {
+            &self.0
+        }
+    }
 
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: serde::de::SeqAccess<'de>,
-            {
-                let mut pattern = Vec::new();
+    impl<T> DerefMut for Serde<T> {
+        fn deref_mut(&mut self) -> &mut T {
+            &mut self.0
+        }
+    }
 
-                while let Some((duration_str, bandwidths_str)) =
-                    seq.next_element::<(String, Vec<String>)>()?
+    impl<T> Serde<T> {
+        /// Consumes the `De`, returning the inner value.
+        pub fn into_inner(self) -> T {
+            self.0
+        }
+    }
+
+    impl<T> From<T> for Serde<T> {
+        fn from(val: T) -> Serde<T> {
+            Serde(val)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Serde<Vec<(Duration, Vec<Bandwidth>)>> {
+        fn deserialize<D>(d: D) -> Result<Serde<Vec<(Duration, Vec<Bandwidth>)>>, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            struct V;
+
+            impl<'de> de::Visitor<'de> for V {
+                type Value = Vec<(Duration, Vec<Bandwidth>)>;
+
+                fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+                    fmt.write_str("a sequence of [str, [str, str, ...]]")
+                }
+
+                fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+                where
+                    A: serde::de::SeqAccess<'de>,
                 {
-                    let duration =
-                        humantime_serde::re::humantime::parse_duration(duration_str.as_str())
-                            .map_err(|e| {
+                    let mut pattern = Vec::with_capacity(seq.size_hint().unwrap_or(0));
+
+                    while let Some((duration_str, bandwidths_str)) =
+                        seq.next_element::<(String, Vec<String>)>()?
+                    {
+                        let duration =
+                            humantime_serde::re::humantime::parse_duration(duration_str.as_str())
+                                .map_err(|e| {
                                 serde::de::Error::custom(format!(
                                     "Failed to parse duration '{}': {}",
                                     duration_str, e
                                 ))
                             })?;
 
-                    let bandwidths = bandwidths_str
-                        .into_iter()
-                        .map(|b| {
-                            human_bandwidth::parse_bandwidth(&b).map_err(|e| {
-                                serde::de::Error::custom(format!(
-                                    "Failed to parse bandwidth '{}': {}",
-                                    b, e
-                                ))
+                        let bandwidths = bandwidths_str
+                            .into_iter()
+                            .map(|b| {
+                                human_bandwidth::parse_bandwidth(&b).map_err(|e| {
+                                    serde::de::Error::custom(format!(
+                                        "Failed to parse bandwidth '{}': {}",
+                                        b, e
+                                    ))
+                                })
                             })
-                        })
-                        .collect::<Result<Vec<_>, _>>()?;
-                    pattern.push((duration, bandwidths));
+                            .collect::<Result<Vec<_>, _>>()?;
+                        pattern.push((duration, bandwidths));
+                    }
+                    Ok(pattern)
                 }
-                Ok(TraceBwConfig { pattern })
             }
-        }
 
-        deserializer.deserialize_seq(TraceBwConfigVisitor)
+            d.deserialize_seq(V).map(Serde)
+        }
     }
 
-    #[cfg(not(feature = "human"))]
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct TraceBwConfigVisitor;
-        impl<'de> serde::de::Visitor<'de> for TraceBwConfigVisitor {
-            type Value = TraceBwConfig;
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("a sequence of [f64, [f64, f64, ...]]")
+    impl ser::Serialize for Serde<Vec<(Duration, Vec<Bandwidth>)>> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: ser::Serializer,
+        {
+            let mut seq = serializer.serialize_seq(Some(self.0.len()))?;
+            for (duration, bandwidths) in &self.0 {
+                let time = humantime_serde::re::humantime::format_duration(*duration).to_string();
+                let bandwidths = bandwidths
+                    .iter()
+                    .map(|item| human_bandwidth::format_bandwidth(*item).to_string())
+                    .collect::<Vec<_>>();
+                seq.serialize_element(&(time, bandwidths))?;
             }
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: serde::de::SeqAccess<'de>,
-            {
-                let mut pattern = Vec::new();
-                while let Some((duration_ms_f64, bandwidths_mbps_f64)) =
-                    seq.next_element::<(f64, Vec<f64>)>()?
-                {
-                    let duration = Duration::from_secs_f64(duration_ms_f64 / 1000f64);
-                    let bandwidths = bandwidths_mbps_f64
-                        .into_iter()
-                        .map(|b| Bandwidth::from_gbps_f64(b * 0.001))
-                        .collect();
-                    pattern.push((duration, bandwidths));
-                }
-                Ok(TraceBwConfig { pattern })
-            }
+            seq.end()
         }
-        deserializer.deserialize_seq(TraceBwConfigVisitor)
+    }
+
+    impl ser::Serialize for Serde<&Vec<(Duration, Vec<Bandwidth>)>> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: ser::Serializer,
+        {
+            let mut seq = serializer.serialize_seq(Some(self.0.len()))?;
+            for (duration, bandwidths) in self.0 {
+                let time = humantime_serde::re::humantime::format_duration(*duration).to_string();
+                let bandwidths = bandwidths
+                    .iter()
+                    .map(|item| human_bandwidth::format_bandwidth(*item).to_string())
+                    .collect::<Vec<_>>();
+                seq.serialize_element(&(time, bandwidths))?;
+            }
+            seq.end()
+        }
     }
 }
 
