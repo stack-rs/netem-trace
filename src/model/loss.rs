@@ -27,12 +27,12 @@
 //! ```
 //! # use netem_trace::model::{StaticLossConfig, LossTraceConfig};
 //! # use netem_trace::{LossPattern, Duration, LossTrace};
-//! # #[cfg(not(feature = "human"))]
-//! let config_file_content = "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
-//! // The content would be "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":\"1s\"}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":\"1s\"}}],\"count\":2}}"
-//! // if the `human` feature is enabled.
 //! # #[cfg(feature = "human")]
 //! # let config_file_content = "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":\"1s\"}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":\"1s\"}}],\"count\":2}}";
+//! // The content would be "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}"
+//! // if the `human` feature is not enabled.
+//! # #[cfg(not(feature = "human"))]
+//! let config_file_content = "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 //! let des: Box<dyn LossTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 //! let mut model = des.into_model();
 //! assert_eq!(
@@ -123,12 +123,12 @@ pub struct StaticLossConfig {
 /// ```
 /// # use netem_trace::model::{StaticLossConfig, LossTraceConfig};
 /// # use netem_trace::{LossPattern, Duration, LossTrace};
-/// # #[cfg(not(feature = "human"))]
-/// let config_file_content = "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
-/// // The content would be "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":\"1s\"}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":\"1s\"}}],\"count\":2}}"
-/// // if the `human` feature is enabled.
 /// # #[cfg(feature = "human")]
 /// # let config_file_content = "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":\"1s\"}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":\"1s\"}}],\"count\":2}}";
+/// // The content would be "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}"
+/// // if the `human` feature is not enabled.
+/// # #[cfg(not(feature = "human"))]
+/// let config_file_content = "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 /// let des: Box<dyn LossTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 /// let mut model = des.into_model();
 /// assert_eq!(
@@ -169,12 +169,12 @@ pub struct StaticLossConfig {
 /// ];
 /// let ser = Box::new(RepeatedLossPatternConfig::new().pattern(pat).count(2)) as Box<dyn LossTraceConfig>;
 /// let ser_str = serde_json::to_string(&ser).unwrap();
-/// # #[cfg(not(feature = "human"))]
-/// let json_str = "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
-/// // The json string would be "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":\"1s\"}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":\"1s\"}}],\"count\":2}}"
-/// // if the `human` feature is enabled.
 /// # #[cfg(feature = "human")]
 /// # let json_str = "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":\"1s\"}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":\"1s\"}}],\"count\":2}}";
+/// // The json string would be "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}"
+/// // if the `human` feature is not enabled.
+/// # #[cfg(not(feature = "human"))]
+/// let json_str = "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 /// assert_eq!(ser_str, json_str);
 /// ```
 pub struct RepeatedLossPattern {
@@ -342,10 +342,10 @@ mod test {
         let ser = Box::new(RepeatedLossPatternConfig::new().pattern(a).count(2))
             as Box<dyn LossTraceConfig>;
         let ser_str = serde_json::to_string(&ser).unwrap();
-        #[cfg(not(feature = "human"))]
-        let des_str = "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
         #[cfg(feature = "human")]
         let des_str = "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":\"1s\"}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":\"1s\"}}],\"count\":2}}";
+        #[cfg(not(feature = "human"))]
+        let des_str = "{\"RepeatedLossPatternConfig\":{\"pattern\":[{\"StaticLossConfig\":{\"loss\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticLossConfig\":{\"loss\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
         assert_eq!(ser_str, des_str);
         let des: Box<dyn LossTraceConfig> = serde_json::from_str(des_str).unwrap();
         let mut model = des.into_model();

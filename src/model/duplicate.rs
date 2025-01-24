@@ -27,12 +27,12 @@
 //! ```
 //! # use netem_trace::model::{StaticDuplicateConfig, DuplicateTraceConfig};
 //! # use netem_trace::{DuplicatePattern, Duration, DuplicateTrace};
-//! # #[cfg(not(feature = "human"))]
-//! let config_file_content = "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
-//! // The content would be "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":\"1s\"}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":\"1s\"}}],\"count\":2}}"
-//! // if the `human` feature is enabled.
 //! # #[cfg(feature = "human")]
 //! # let config_file_content = "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":\"1s\"}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":\"1s\"}}],\"count\":2}}";
+//! // The content would be "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}"
+//! // if the `human` feature is not enabled.
+//! # #[cfg(not(feature = "human"))]
+//! let config_file_content = "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 //! let des: Box<dyn DuplicateTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 //! let mut model = des.into_model();
 //! assert_eq!(
@@ -123,12 +123,12 @@ pub struct StaticDuplicateConfig {
 /// ```
 /// # use netem_trace::model::{StaticDuplicateConfig, DuplicateTraceConfig};
 /// # use netem_trace::{DuplicatePattern, Duration, DuplicateTrace};
-/// # #[cfg(not(feature = "human"))]
-/// let config_file_content = "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
-/// // The content would be "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":\"1s\"}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":\"1s\"}}],\"count\":2}}"
-/// // if the `human` feature is enabled.
 /// # #[cfg(feature = "human")]
 /// # let config_file_content = "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":\"1s\"}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":\"1s\"}}],\"count\":2}}";
+/// // The content would be "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}"
+/// // if the `human` feature is not enabled.
+/// # #[cfg(not(feature = "human"))]
+/// let config_file_content = "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 /// let des: Box<dyn DuplicateTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 /// let mut model = des.into_model();
 /// assert_eq!(
@@ -169,12 +169,12 @@ pub struct StaticDuplicateConfig {
 /// ];
 /// let ser = Box::new(RepeatedDuplicatePatternConfig::new().pattern(pat).count(2)) as Box<dyn DuplicateTraceConfig>;
 /// let ser_str = serde_json::to_string(&ser).unwrap();
-/// # #[cfg(not(feature = "human"))]
-/// let json_str = "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
-/// // The json string would be "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":\"1s\"}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":\"1s\"}}],\"count\":2}}"
-/// // if the `human` feature is enabled.
 /// # #[cfg(feature = "human")]
 /// # let json_str = "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":\"1s\"}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":\"1s\"}}],\"count\":2}}";
+/// // The json string would be "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}"
+/// // if the `human` feature is not enabled.
+/// # #[cfg(not(feature = "human"))]
+/// let json_str = "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 /// assert_eq!(ser_str, json_str);
 /// ```
 pub struct RepeatedDuplicatePattern {
@@ -342,10 +342,10 @@ mod test {
         let ser = Box::new(RepeatedDuplicatePatternConfig::new().pattern(a).count(2))
             as Box<dyn DuplicateTraceConfig>;
         let ser_str = serde_json::to_string(&ser).unwrap();
-        #[cfg(not(feature = "human"))]
-        let des_str = "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
         #[cfg(feature = "human")]
         let des_str = "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":\"1s\"}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":\"1s\"}}],\"count\":2}}";
+        #[cfg(not(feature = "human"))]
+        let des_str = "{\"RepeatedDuplicatePatternConfig\":{\"pattern\":[{\"StaticDuplicateConfig\":{\"duplicate\":[0.1,0.2],\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDuplicateConfig\":{\"duplicate\":[0.2,0.4],\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
         assert_eq!(ser_str, des_str);
         let des: Box<dyn DuplicateTraceConfig> = serde_json::from_str(des_str).unwrap();
         let mut model = des.into_model();

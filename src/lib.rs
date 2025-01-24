@@ -5,6 +5,7 @@
 //! If you want to use the pre-defined models, please enable the `model` or `bw-model` feature.
 //!
 //! And if you want read configuration from file, `serde` feature should also be enabled.
+//! We alse recommend you to enable `human` feature to make the configuration file more human-readable.
 //!
 //! An example to build model from configuration:
 //!
@@ -24,12 +25,12 @@
 //! ```
 //! # use netem_trace::model::{StaticBwConfig, BwTraceConfig};
 //! # use netem_trace::{Bandwidth, Duration, BwTrace};
-//! # #[cfg(not(feature = "human"))]
-//! let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
-//! // The content would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":\"12Mbps\",\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":\"24Mbps\",\"duration\":\"1s\"}}],\"count\":2}}"
-//! // if the `human` feature is enabled.
 //! # #[cfg(feature = "human")]
 //! # let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":\"12Mbps\",\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":\"24Mbps\",\"duration\":\"1s\"}}],\"count\":2}}";
+//! // The content would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}"
+//! // if the `human` feature is not enabled.
+//! # #[cfg(not(feature = "human"))]
+//! let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 //! let des: Box<dyn BwTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 //! let mut model = des.into_model();
 //! assert_eq!(
@@ -87,6 +88,7 @@
 //!
 //! - `model`: Enable this feature if you want to use all pre-defined models.
 //!     - `bw-model`: Enable this feature if you want to use the pre-defined [`BwTrace`] models.
+//!     - `truncated-normal`: Enable this feature if you want to use truncated normal distribution in [`model::NormalizedBw`] models.
 //!
 //! ### Trace Format Features
 //!

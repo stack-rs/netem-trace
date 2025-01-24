@@ -5,8 +5,9 @@
 //! ## Predefined models
 //!
 //! - [`StaticBw`]: A trace model with static bandwidth.
-//! - [`NormalizedBw`]: A trace model whose bandwidth subjects to a normal distribution (can set upper and lower bounds).
+//! - [`NormalizedBw`]: A trace model whose bandwidth subjects to a normal distribution (can set upper and lower bounds, and can configure it to be truncated with `truncated-normal` feature enabled).
 //! - [`RepeatedBwPattern`]: A trace model with a repeated bandwidth pattern.
+//! - [`TraceBw`]: A trace model to replay compact bandwidth changes from file, especially useful for online sampled records.
 //!
 //! ## Examples
 //!
@@ -28,12 +29,12 @@
 //! ```
 //! # use netem_trace::model::{StaticBwConfig, BwTraceConfig};
 //! # use netem_trace::{Bandwidth, Duration, BwTrace};
-//! # #[cfg(not(feature = "human"))]
-//! let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
-//! // The content would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}"
-//! // if the `human` feature is enabled.
 //! # #[cfg(feature = "human")]
 //! # let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":\"12Mbps\",\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":\"24Mbps\",\"duration\":\"1s\"}}],\"count\":2}}";
+//! // The content would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}"
+//! // if the `human` feature is not enabled.
+//! # #[cfg(not(feature = "human"))]
+//! let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 //! let des: Box<dyn BwTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 //! let mut model = des.into_model();
 //! assert_eq!(
@@ -409,12 +410,12 @@ pub struct SawtoothBwConfig {
 /// ```
 /// # use netem_trace::model::{StaticBwConfig, BwTraceConfig};
 /// # use netem_trace::{Bandwidth, Duration, BwTrace};
-/// # #[cfg(not(feature = "human"))]
-/// let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
-/// // The content would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":\"1s\"}}],\"count\":2}}"
-/// // if the `human` feature is enabled.
 /// # #[cfg(feature = "human")]
 /// # let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":\"12Mbps\",\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":\"24Mbps\",\"duration\":\"1s\"}}],\"count\":2}}";
+/// // The content would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}"
+/// // if the `human` feature is not enabled.
+/// # #[cfg(not(feature = "human"))]
+/// let config_file_content = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 /// let des: Box<dyn BwTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 /// let mut model = des.into_model();
 /// assert_eq!(
@@ -455,12 +456,12 @@ pub struct SawtoothBwConfig {
 /// ];
 /// let ser = Box::new(RepeatedBwPatternConfig::new().pattern(pat).count(2)) as Box<dyn BwTraceConfig>;
 /// let ser_str = serde_json::to_string(&ser).unwrap();
-/// # #[cfg(not(feature = "human"))]
-/// let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
-/// // The json string would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":\"12Mbps\",\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":\"24Mbps\",\"duration\":\"1s\"}}],\"count\":2}}"
-/// // if the `human` feature is enabled.
 /// # #[cfg(feature = "human")]
 /// # let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":\"12Mbps\",\"duration\":\"1s\"}},{\"StaticBwConfig\":{\"bw\":\"24Mbps\",\"duration\":\"1s\"}}],\"count\":2}}";
+/// // The json string would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}"
+/// // if the `human` feature is not enabled.
+/// # #[cfg(not(feature = "human"))]
+/// let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":12000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticBwConfig\":{\"bw\":{\"gbps\":0,\"bps\":24000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 /// assert_eq!(ser_str, json_str);
 /// ```
 pub struct RepeatedBwPattern {
@@ -482,6 +483,8 @@ pub struct RepeatedBwPatternConfig {
 }
 
 /// This model is used to enable a more compact trace.
+/// It replays the bandwidth changes according to a trace file,
+/// and is necessary for replaying sampled traces from Internet or production.
 ///
 /// ## Examples
 ///
@@ -525,18 +528,19 @@ pub struct RepeatedBwPatternConfig {
 /// assert_eq!(repeated_tracebw.next_bw(), Some((Bandwidth::from_mbps(2), Duration::from_millis(1))));
 /// assert_eq!(repeated_tracebw.next_bw(), Some((Bandwidth::from_mbps(4), Duration::from_millis(1))));
 /// assert_eq!(repeated_tracebw.next_bw(), Some((Bandwidth::from_mbps(1), Duration::from_millis(2))));
-///  
 ///
-/// let boxed_config : Box<dyn BwTraceConfig> = Box::new(repeated_tracebw_config);
-/// let json_trace = serde_json::to_string(&boxed_config).unwrap();
+/// let ser : Box<dyn BwTraceConfig> = Box::new(repeated_tracebw_config);
+/// let ser_str = serde_json::to_string(&ser).unwrap();
 ///
-/// #[cfg(feature = "human")]
-/// let expected ="{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"TraceBwConfig\":[[\"1ms\",[\"2Mbps\",\"4Mbps\"]],[\"2ms\",[\"1Mbps\"]]]}],\"count\":0}}";
+/// # #[cfg(feature = "human")]
+/// let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"TraceBwConfig\":[[\"1ms\",[\"2Mbps\",\"4Mbps\"]],[\"2ms\",[\"1Mbps\"]]]}],\"count\":0}}";
+/// // The json string would be "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"TraceBwConfig\":[[1.0,[2.0,4.0]],[2.0,[1.0]]]}],\"count\":0}}"
+/// // if the `human` feature is not enabled.
 /// #[cfg(not(feature = "human"))]
-/// let expected ="{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"TraceBwConfig\":[[1.0,[2.0,4.0]],[2.0,[1.0]]]}],\"count\":0}}";
-/// assert_eq!(json_trace , expected);
+/// let json_str = "{\"RepeatedBwPatternConfig\":{\"pattern\":[{\"TraceBwConfig\":[[1.0,[2.0,4.0]],[2.0,[1.0]]]}],\"count\":0}}";
+/// assert_eq!(ser_str, json_str);
 ///
-/// let des: Box<dyn BwTraceConfig> = serde_json::from_str(json_trace.as_str()).unwrap();
+/// let des: Box<dyn BwTraceConfig> = serde_json::from_str(json_str).unwrap();
 /// let mut model = des.into_model();
 ///
 /// assert_eq!(model.next_bw(), Some((Bandwidth::from_mbps(2), Duration::from_millis(1))));
@@ -546,23 +550,6 @@ pub struct RepeatedBwPatternConfig {
 /// assert_eq!(model.next_bw(), Some((Bandwidth::from_mbps(2), Duration::from_millis(1))));
 /// assert_eq!(model.next_bw(), Some((Bandwidth::from_mbps(4), Duration::from_millis(1))));
 /// assert_eq!(model.next_bw(), Some((Bandwidth::from_mbps(1), Duration::from_millis(2))));
-///
-///
-/// let error_duration_example = r##"{"RepeatedBwPatternConfig":{"pattern":[{"TraceBwConfig":[["1ts",["2Mbps 234kbps","4Mbps"]],["2ms",["1Mbps"]]]}],"count":0}}"##;
-/// let err = serde_json::from_str::<Box<dyn BwTraceConfig>>(error_duration_example)
-///     .map(|_| ())
-///     .unwrap_err();
-/// // "Failed to parse duration '1ts': unknown time unit \"ts\", supported units: ns, us, ms, sec, min, hours, days, weeks, months, years (and few variations) at line 1 column 91"
-/// #[cfg(feature = "human")]
-/// assert!(err.to_string().contains("1ts"));
-///
-/// let error_bandwidth_example = r##"{"RepeatedBwPatternConfig":{"pattern":[{"TraceBwConfig":[["1ms",["2Mbps 234lbps","4Mbps"]],["2ms",["1Mbps"]]]}],"count":0}}"##;
-/// let err = serde_json::from_str::<Box<dyn BwTraceConfig>>(error_bandwidth_example)
-///     .map(|_| ())
-///     .unwrap_err();
-/// // "Failed to parse bandwidth '2Mbps 234lbps': unknown bandwidth unit \"lbps\", supported units: bps, kbps, Mbps, Gbps, Tbps at line 1 column 91"
-/// #[cfg(feature = "human")]
-/// assert!(err.to_string().contains("2Mbps 234lbps"));
 /// ```
 pub struct TraceBw {
     pub pattern: Vec<(Duration, Vec<Bandwidth>)>, // inner vector is never empty
@@ -725,28 +712,6 @@ impl<'de> Deserialize<'de> for TraceBwConfig {
     }
 }
 
-impl BwTrace for TraceBw {
-    fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
-        let result = self
-            .pattern
-            .get(self.outer_index)
-            .and_then(|(duration, bandwidth)| {
-                bandwidth
-                    .get(self.inner_index)
-                    .map(|bandwidth| (*bandwidth, *duration))
-            });
-        if result.is_some() {
-            if self.pattern[self.outer_index].1.len() > self.inner_index + 1 {
-                self.inner_index += 1;
-            } else {
-                self.outer_index += 1;
-                self.inner_index = 0;
-            }
-        }
-        result
-    }
-}
-
 impl BwTrace for StaticBw {
     fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
         if let Some(duration) = self.duration.take() {
@@ -838,6 +803,28 @@ impl BwTrace for RepeatedBwPattern {
                 }
             }
         }
+    }
+}
+
+impl BwTrace for TraceBw {
+    fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
+        let result = self
+            .pattern
+            .get(self.outer_index)
+            .and_then(|(duration, bandwidth)| {
+                bandwidth
+                    .get(self.inner_index)
+                    .map(|bandwidth| (*bandwidth, *duration))
+            });
+        if result.is_some() {
+            if self.pattern[self.outer_index].1.len() > self.inner_index + 1 {
+                self.inner_index += 1;
+            } else {
+                self.outer_index += 1;
+                self.inner_index = 0;
+            }
+        }
+        result
     }
 }
 

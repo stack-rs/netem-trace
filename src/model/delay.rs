@@ -27,12 +27,12 @@
 //! ```
 //! # use netem_trace::model::{StaticDelayConfig, DelayTraceConfig};
 //! # use netem_trace::{Delay, Duration, DelayTrace};
-//! # #[cfg(not(feature = "human"))]
-//! let config_file_content = "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":10000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":20000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
-//! // The content would be "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":\"10ms\",\"duration\":\"1s\"}},{\"StaticDelayConfig\":{\"delay\":\"20ms\",\"duration\":\"1s\"}}],\"count\":2}}"
-//! // if the `human` feature is enabled.
 //! # #[cfg(feature = "human")]
 //! # let config_file_content = "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":\"10ms\",\"duration\":\"1s\"}},{\"StaticDelayConfig\":{\"delay\":\"20ms\",\"duration\":\"1s\"}}],\"count\":2}}";
+//! // The content would be "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":10000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":20000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}"
+//! // if the `human` feature is not enabled.
+//! # #[cfg(not(feature = "human"))]
+//! let config_file_content = "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":10000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":20000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 //! let des: Box<dyn DelayTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 //! let mut model = des.into_model();
 //! assert_eq!(
@@ -127,12 +127,12 @@ pub struct StaticDelayConfig {
 /// ```
 /// # use netem_trace::model::{StaticDelayConfig, DelayTraceConfig};
 /// # use netem_trace::{Delay, Duration, DelayTrace};
-/// # #[cfg(not(feature = "human"))]
-/// let config_file_content = "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":10000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":20000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
-/// // The content would be "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":\"10ms\",\"duration\":\"1s\"}},{\"StaticDelayConfig\":{\"delay\":\"20ms\",\"duration\":\"1s\"}}],\"count\":2}}"
-/// // if the `human` feature is enabled.
 /// # #[cfg(feature = "human")]
 /// # let config_file_content = "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":\"10ms\",\"duration\":\"1s\"}},{\"StaticDelayConfig\":{\"delay\":\"20ms\",\"duration\":\"1s\"}}],\"count\":2}}";
+/// // The content would be "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":10000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":20000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}"
+/// // if the `human` feature is not enabled.
+/// # #[cfg(not(feature = "human"))]
+/// let config_file_content = "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":10000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":20000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 /// let des: Box<dyn DelayTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 /// let mut model = des.into_model();
 /// assert_eq!(
@@ -173,12 +173,12 @@ pub struct StaticDelayConfig {
 /// ];
 /// let ser = Box::new(RepeatedDelayPatternConfig::new().pattern(pat).count(2)) as Box<dyn DelayTraceConfig>;
 /// let ser_str = serde_json::to_string(&ser).unwrap();
-/// # #[cfg(not(feature = "human"))]
-/// let json_str = "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":10000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":20000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
-/// // The json string would be "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":\"10ms\",\"duration\":\"1s\"}},{\"StaticDelayConfig\":{\"delay\":\"20ms\",\"duration\":\"1s\"}}],\"count\":2}}"
-/// // if the `human` feature is enabled.
 /// # #[cfg(feature = "human")]
 /// # let json_str = "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":\"10ms\",\"duration\":\"1s\"}},{\"StaticDelayConfig\":{\"delay\":\"20ms\",\"duration\":\"1s\"}}],\"count\":2}}";
+/// // The json string would be "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":10000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":20000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}"
+/// // if the `human` feature is not enabled.
+/// # #[cfg(not(feature = "human"))]
+/// let json_str = "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":10000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":20000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
 /// assert_eq!(ser_str, json_str);
 /// ```
 pub struct RepeatedDelayPattern {
@@ -346,10 +346,10 @@ mod test {
         let ser = Box::new(RepeatedDelayPatternConfig::new().pattern(a).count(2))
             as Box<dyn DelayTraceConfig>;
         let ser_str = serde_json::to_string(&ser).unwrap();
-        #[cfg(not(feature = "human"))]
-        let des_str = "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":10000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":20000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
         #[cfg(feature = "human")]
         let des_str = "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":\"10ms\",\"duration\":\"1s\"}},{\"StaticDelayConfig\":{\"delay\":\"20ms\",\"duration\":\"1s\"}}],\"count\":2}}";
+        #[cfg(not(feature = "human"))]
+        let des_str = "{\"RepeatedDelayPatternConfig\":{\"pattern\":[{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":10000000},\"duration\":{\"secs\":1,\"nanos\":0}}},{\"StaticDelayConfig\":{\"delay\":{\"secs\":0,\"nanos\":20000000},\"duration\":{\"secs\":1,\"nanos\":0}}}],\"count\":2}}";
         assert_eq!(ser_str, des_str);
         let des: Box<dyn DelayTraceConfig> = serde_json::from_str(des_str).unwrap();
         let mut model = des.into_model();
