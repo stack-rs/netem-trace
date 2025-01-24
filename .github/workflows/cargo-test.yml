@@ -6,10 +6,10 @@ on:
       - main
       - dev
   pull_request:
-      types: [ready_for_review, opened, synchronize, reopened]
-      paths:
-        - '**.rs'
-        - '**/Cargo.toml'
+    types: [ready_for_review, opened, synchronize, reopened]
+    paths:
+      - "**.rs"
+      - "**/Cargo.toml"
   workflow_dispatch:
 
 jobs:
@@ -23,9 +23,9 @@ jobs:
       - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:
-            toolchain: stable
-            override: true
-            components: rustfmt, clippy
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
       - name: deal with rust cache
         uses: Swatinem/rust-cache@v1
       - name: cargo test
@@ -42,9 +42,9 @@ jobs:
       - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:
-            toolchain: stable
-            override: true
-            components: rustfmt, clippy
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
       - name: deal with rust cache
         uses: Swatinem/rust-cache@v1
       - name: cargo test
@@ -61,9 +61,9 @@ jobs:
       - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:
-            toolchain: stable
-            override: true
-            components: rustfmt, clippy
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
       - name: deal with rust cache
         uses: Swatinem/rust-cache@v1
       - name: cargo test
@@ -80,15 +80,14 @@ jobs:
       - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:
-            toolchain: stable
-            override: true
-            components: rustfmt, clippy
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
       - name: deal with rust cache
         uses: Swatinem/rust-cache@v1
       - name: cargo test
         run: |
           cargo test --no-fail-fast --verbose --features mahimahi --features serde
-          
 
   cargo-test-truncated-normal:
     runs-on: ubuntu-latest
@@ -100,9 +99,9 @@ jobs:
       - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:
-            toolchain: stable
-            override: true
-            components: rustfmt, clippy
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
       - name: deal with rust cache
         uses: Swatinem/rust-cache@v1
       - name: cargo test

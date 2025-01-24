@@ -13,24 +13,10 @@ jobs:
           fetch-depth: 0
       - uses: BobAnkh/auto-generate-changelog@master
         with:
-          ACCESS_TOKEN: ${{secrets.CHANGELOG_PAT_STACK}}
-          PATH: 'CHANGELOG.md'
-          COMMIT_MESSAGE: 'docs(changelog): update release notes'
-          COMMITTER: 'github-actions[bot] 41898282+github-actions[bot]@users.noreply.github.com'
-          TYPE: 'feat:Feature,fix:Bug Fixes,docs:Documentation,refactor:Refactor,perf:Performance Improvements'
-          DEFAULT_SCOPE: '*'
-
-  add-contributors:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: BobAnkh/add-contributors@master
-        with:
-          CONTRIBUTOR: '### Contributors'
-          COLUMN_PER_ROW: '6'
-          ACCESS_TOKEN: ${{secrets.CHANGELOG_PAT_STACK}}
-          IMG_WIDTH: '100'
-          FONT_SIZE: '14'
-          PATH: 'README.md'
-          COMMIT_MESSAGE: 'docs(readme): update contributors'
-          AVATAR_SHAPE: 'round'       
+          ACCESS_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          PATH: "CHANGELOG.md"
+          COMMIT_MESSAGE: "docs(changelog): update release notes"
+          COMMITTER: "github-actions[bot] 41898282+github-actions[bot]@users.noreply.github.com"
+          TYPE: "feat:Feature,fix:Bug Fixes,docs:Documentation,refactor:Refactor,perf:Performance Improvements"
+          DEFAULT_SCOPE: "*"
+          REGENERATE_COUNT: 4
