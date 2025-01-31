@@ -19,4 +19,3 @@ jobs:
           COMMITTER: "github-actions[bot] 41898282+github-actions[bot]@users.noreply.github.com"
           TYPE: "feat:Feature,fix:Bug Fixes,docs:Documentation,refactor:Refactor,perf:Performance Improvements"
           DEFAULT_SCOPE: "*"
-          REGENERATE_COUNT: 4
