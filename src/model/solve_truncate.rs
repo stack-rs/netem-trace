@@ -257,7 +257,7 @@ mod tests {
         let mut rng = StdRng::seed_from_u64(42);
 
         for _ in 0..1000 {
-            let x = rng.gen_range(low..high);
+            let x = rng.random_range(low..high);
             let eps = 5E-8 * (low + high);
             let delta1 = func(x + eps) - func(x);
             let delta2 = eps * deri(x + eps * 0.5);

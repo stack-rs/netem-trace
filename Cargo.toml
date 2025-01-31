@@ -23,8 +23,8 @@ bandwidth = "0.3.0"
 dyn-clone = { version = "1.0.10", optional = true }
 itertools = { version = "0.14.0", optional = true }
 once_cell = { version = "1.17.0", optional = true }
-rand = { version = "0.8.5", optional = true }
-rand_distr = { version = "0.4.3", optional = true }
+rand = { version = "0.9.0", optional = true }
+rand_distr = { version = "0.5.0", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
 typetag = { version = "0.2.5", optional = true }
 humantime-serde = { version = "1.1.1", optional = true }
