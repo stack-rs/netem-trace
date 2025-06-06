@@ -85,7 +85,7 @@ use super::solve_truncate::solve;
 ///
 /// This model always returns the same delay for the given amount of packets.
 ///
-/// If the `count` is None, the delay will be repeated forever.
+/// If the `count` is 0, the delay will be repeated forever.
 ///
 /// ## Examples
 ///
@@ -103,7 +103,8 @@ use super::solve_truncate::solve;
 #[derive(Debug, Clone)]
 pub struct StaticDelayPerPacket {
     pub delay: Delay,
-    pub count: Option<usize>,
+    pub count: usize,
+    current_count: usize,
 }
 
 /// The configuration struct for [`StaticDelayPerPacket`].
@@ -118,8 +119,7 @@ pub struct StaticDelayPerPacketConfig {
         serde(with = "humantime_serde")
     )]
     pub delay: Option<Delay>,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    pub count: Option<usize>,
+    pub count: usize,
 }
 
 /// The model contains an array of per-packet delay trace models.
@@ -213,6 +213,8 @@ pub struct RepeatedDelayPerPacketPatternConfig {
 ///
 /// The delay will subject to N(mean, std_dev), but bounded within [lower_bound, upper_bound] (optional)
 ///
+/// If the `count` is 0, the delay will be repeated forever, else it will be repeated `count` times.
+///
 /// ## Examples
 ///
 /// A simple example without any bound on delay:
@@ -255,7 +257,8 @@ pub struct NormalizedDelayPerPacket {
     pub upper_bound: Option<Delay>,
     pub lower_bound: Delay,
     pub seed: u64,
-    pub count: Option<usize>,
+    pub count: usize,
+    current_count: usize,
     rng: StdRng,
     normal: Normal<f64>,
 }
@@ -290,20 +293,18 @@ pub struct NormalizedDelayPerPacketConfig {
         serde(with = "humantime_serde")
     )]
     pub lower_bound: Option<Delay>,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    pub count: Option<usize>,
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub count: usize,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub seed: Option<u64>,
 }
 
 impl DelayPerPacketTrace for StaticDelayPerPacket {
     fn next_delay(&mut self) -> Option<Delay> {
-        if let Some(0) = self.count {
+        if self.count != 0 && self.count == self.current_count {
             None
         } else {
-            if let Some(count) = self.count.as_mut() {
-                *count -= 1
-            }
+            self.current_count += 1;
             Some(self.delay)
         }
     }
@@ -338,12 +339,10 @@ impl DelayPerPacketTrace for RepeatedDelayPerPacketPattern {
 
 impl DelayPerPacketTrace for NormalizedDelayPerPacket {
     fn next_delay(&mut self) -> Option<Delay> {
-        if let Some(0) = self.count {
+        if self.count != 0 && self.count == self.current_count {
             None
         } else {
-            if let Some(count) = self.count.as_mut() {
-                *count -= 1
-            }
+            self.current_count += 1;
             let delay = self.normal.sample(&mut self.rng).max(0.0);
             let mut delay = Delay::from_secs_f64(delay);
             delay = delay.max(self.lower_bound);
@@ -359,7 +358,7 @@ impl StaticDelayPerPacketConfig {
     pub fn new() -> Self {
         Self {
             delay: None,
-            count: None,
+            count: 0,
         }
     }
 
@@ -369,7 +368,7 @@ impl StaticDelayPerPacketConfig {
     }
 
     pub fn count(mut self, count: usize) -> Self {
-        self.count = Some(count);
+        self.count = count;
         self
     }
 
@@ -377,6 +376,7 @@ impl StaticDelayPerPacketConfig {
         StaticDelayPerPacket {
             delay: self.delay.unwrap_or_else(|| Delay::from_millis(10)),
             count: self.count,
+            current_count: 0,
         }
     }
 }
@@ -417,7 +417,7 @@ impl NormalizedDelayPerPacketConfig {
             std_dev: None,
             upper_bound: None,
             lower_bound: None,
-            count: None,
+            count: 0,
             seed: None,
         }
     }
@@ -443,7 +443,7 @@ impl NormalizedDelayPerPacketConfig {
     }
 
     pub fn count(mut self, count: usize) -> Self {
-        self.count = Some(count);
+        self.count = count;
         self
     }
 
@@ -474,6 +474,7 @@ impl NormalizedDelayPerPacketConfig {
             upper_bound,
             lower_bound,
             count,
+            current_count: 0,
             seed,
             rng,
             normal,
@@ -559,6 +560,34 @@ macro_rules! impl_delay_per_packet_trace_config {
 impl_delay_per_packet_trace_config!(StaticDelayPerPacketConfig);
 impl_delay_per_packet_trace_config!(NormalizedDelayPerPacketConfig);
 impl_delay_per_packet_trace_config!(RepeatedDelayPerPacketPatternConfig);
+
+/// Turn a [`DelayPerPacketTraceConfig`] into a forever repeated [`RepeatedDelayPerPacketPatternConfig`].
+pub trait Forever: DelayPerPacketTraceConfig {
+    fn forever(self) -> RepeatedDelayPerPacketPatternConfig;
+}
+
+/// Implement the [`Forever`] trait for the per-packet delay trace model config (any struct implements [`DelayPerPacketTraceConfig`]).
+#[macro_export]
+macro_rules! impl_forever_delay_per_packet {
+    ($name:ident) => {
+        impl Forever for $name {
+            fn forever(self) -> RepeatedDelayPerPacketPatternConfig {
+                RepeatedDelayPerPacketPatternConfig::new()
+                    .pattern(vec![Box::new(self)])
+                    .count(0)
+            }
+        }
+    };
+}
+
+impl_forever_delay_per_packet!(StaticDelayPerPacketConfig);
+impl_forever_delay_per_packet!(NormalizedDelayPerPacketConfig);
+
+impl Forever for RepeatedDelayPerPacketPatternConfig {
+    fn forever(self) -> RepeatedDelayPerPacketPatternConfig {
+        self.count(0)
+    }
+}
 
 #[cfg(test)]
 mod test {
