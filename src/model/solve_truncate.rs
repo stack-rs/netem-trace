@@ -8,14 +8,14 @@
 //! Enable `truncated-normal` feature to use this module.
 //!
 //! Use example can be found in the doc of `model::bw::NormalizedBwConfig::build_truncated`.
-//!  
+//!
 //!
 //! Notation:
 //! ```txt
 //!     cdf(t, avg, sigma) is the cumulative distribution function of a normal distribution,
 //!         whose center is avg and standard derivation is sigma, with respect to t
 //!
-//!     pdf(t, avg, sigma) is the probablity density function of a normal distribution,
+//!     pdf(t, avg, sigma) is the probability density function of a normal distribution,
 //!         whose center is avg and standard derivation is sigma, with respect to t
 //! ```
 use statrs::function::erf::erf;
@@ -31,9 +31,9 @@ use std::f64::consts::PI;
 ///
 /// if lower or upper are given as `None`, default values of 0.0 and +inf respectively are used.
 ///
-/// The calculation is seperated into three addicative parts.
+/// The calculation is separated into three addicative parts.
 /// 1. $$\int_{\text{lower}}^{\text{upper}} t \times \text{pdf}(t, \text{avg}, \text{sigma} ) \ \text dt $$
-///     
+///
 ///     The indefinite integral of above is calculated in `integral`
 ///
 /// 2. $$upper \times (1 - cdf(upper, avg, sigma))$$
@@ -99,7 +99,7 @@ fn cdf(t: f64, avg: f64, sigma: f64) -> f64 {
 /// The derivative of `truncated_bandwidth` with respect to `avg`.
 /// As `truncated_bandwidth` is calculated in addicative parts, here calculates the derivative of it in
 /// addicative parts, part by part.
-///  
+///
 fn deri_truncated_bandwidth(avg: f64, sigma: f64, lower: Option<f64>, upper: Option<f64>) -> f64 {
     let upper_integral = if let Some(upper) = upper {
         deri_integral(avg, upper, sigma)
@@ -129,7 +129,7 @@ fn deri_truncated_bandwidth(avg: f64, sigma: f64, lower: Option<f64>, upper: Opt
     upper_integral - lower_integral + lower_truncate + upper_truncate
 }
 
-/// Patial derivative of the following respect to `avg`.
+/// Partial derivative of the following respect to `avg`.
 ///     $$\int t \times \text{pdf}(t, \text{avg}, \text{sigma} ) \ \text dt $$
 ///
 /// Used in `derivative_truncated_bandwidth`.
@@ -142,7 +142,7 @@ fn deri_integral(avg: f64, t: f64, sigma: f64) -> f64 {
     part1 + part2
 }
 
-/// Patial derivative of the following respect to `avg`.
+/// Partial derivative of the following respect to `avg`.
 ///     cdf(t, avg, sigma)
 ///
 /// Used in `derivative_truncated_bandwidth`.
@@ -158,14 +158,14 @@ fn deri_cdf(t: f64, avg: f64, sigma: f64) -> f64 {
 /// Parameters:
 ///     x : target mathematical expectation of the truncated normal distribution
 ///     sigma: the standard deviation of the normal distribution before truncation
-///     lower: the lower bound of the truncation, defalut 0 if None is provided
-///     upper: the upper bound of the truncation, defalut +inf if None is provided
+///     lower: the lower bound of the truncation, default 0 if None is provided
+///     upper: the upper bound of the truncation, default +inf if None is provided
 ///
 /// Return value:
 ///     if a solution is found for the problem, returns the cernter of the normal distribution before truncation
 ///     else (aka the sanity check of the parameters failed), returns None.
 ///
-/// The units of the parameters above should be consistant, which is the unit of the return value.
+/// The units of the parameters above should be consistent, which is the unit of the return value.
 ///
 /// ## Examples
 ///
@@ -198,7 +198,7 @@ fn deri_cdf(t: f64, avg: f64, sigma: f64) -> f64 {
 /// let a = solve(10.0, 0.01, Some(3.0), None).unwrap();
 /// assert_eq!(a, 10.0);
 /// ```
-///     
+///
 pub fn solve(x: f64, sigma: f64, mut lower: Option<f64>, upper: Option<f64>) -> Option<f64> {
     if sigma.abs() <= f64::EPSILON {
         return Some(x);

@@ -5,7 +5,7 @@
 //! If you want to use the pre-defined models, please enable the `model` or `bw-model` feature.
 //!
 //! And if you want read configuration from file, `serde` feature should also be enabled.
-//! We alse recommend you to enable `human` feature to make the configuration file more human-readable.
+//! We else recommend you to enable `human` feature to make the configuration file more human-readable.
 //!
 //! An example to build model from configuration:
 //!
@@ -158,7 +158,7 @@ pub type LossPattern = Vec<f64>;
 /// the packet 101 is not duplicated, then the probability of packet 102 being duplicated is still 0.8.
 ///
 /// If both packet 101 and 102 were duplicated, then the probability of packet 103 being duplicated
-/// is still 0.1, and as long as the packets were duplicated, the propability of the next packet
+/// is still 0.1, and as long as the packets were duplicated, the probability of the next packet
 /// being duplicated is always the last element - in this case, 0.1.
 pub type DuplicatePattern = Vec<f64>;
 
@@ -190,6 +190,20 @@ pub trait BwTrace: Send {
 /// in the sequence, or **None** if the trace goes to end.
 pub trait DelayTrace: Send {
     fn next_delay(&mut self) -> Option<(Delay, Duration)>;
+}
+
+/// This is a trait that represents a trace of per-packet delays.
+///
+/// The trace is a sequence of `delay`.
+/// The delay describes how long the packet is delayed when going through.
+///
+/// For example, if the sequence is [10ms, 20ms, 30ms],
+/// then the delay will be 10ms for the first packet, then 20ms for second, then 30ms for third.
+///
+/// The next_delay function either returns **the next delay**
+/// in the sequence, or **None** if the trace goes to end.
+pub trait DelayPerPacketTrace: Send {
+    fn next_delay(&mut self) -> Option<Delay>;
 }
 
 /// This is a trait that represents a trace of loss patterns.
