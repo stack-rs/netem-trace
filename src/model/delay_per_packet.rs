@@ -74,7 +74,7 @@ pub trait DelayPerPacketTraceConfig: DynClone + Send {
 dyn_clone::clone_trait_object!(DelayPerPacketTraceConfig);
 
 use rand::{rngs::StdRng, SeedableRng as _};
-use rand_distr::{Distribution, Normal};
+use rand_distr::{Distribution, LogNormal, Normal};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -211,7 +211,7 @@ pub struct RepeatedDelayPerPacketPatternConfig {
 
 /// The model of a per-packet delay trace subjects to a normal distribution.
 ///
-/// The delay will subject to N(mean, std_dev), but bounded within [lower_bound, upper_bound] (optional)
+/// The delay will subject to N(mean, std_dev²), but bounded within [lower_bound, upper_bound] (optional)
 ///
 /// If the `count` is 0, the delay will be repeated forever, else it will be repeated `count` times.
 ///
@@ -298,6 +298,97 @@ pub struct NormalizedDelayPerPacketConfig {
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub seed: Option<u64>,
 }
+/// The model of a per-packet delay trace subjects to a log-normal distribution.
+///
+/// The delay will subject to Lognormal(μ, σ²), but bounded within [lower_bound, upper_bound] (optional)
+/// The provided mean and std_dev are the one of the log-normal law and not the one of the underlying normal law.
+///
+/// If the `count` is 0, the delay will be repeated forever, else it will be repeated `count` times.
+///
+/// ## Examples
+///
+/// A simple example without any bound on delay:
+///
+/// ```
+/// # use netem_trace::model::LogNormalizedDelayPerPacketConfig;
+/// # use netem_trace::{Delay, DelayPerPacketTrace};
+/// let mut log_normal_delay = LogNormalizedDelayPerPacketConfig::new()
+///     .mean(Delay::from_millis(12))
+///     .std_dev(Delay::from_millis(1))
+///     .count(2)
+///     .seed(42)
+///     .build();
+/// assert_eq!(log_normal_delay.next_delay(), Some(Delay::from_nanos(12027817)));
+/// assert_eq!(log_normal_delay.next_delay(), Some(Delay::from_nanos(12091533)));
+/// assert_eq!(log_normal_delay.next_delay(), None);
+/// ```
+///
+/// A more complex example with bounds on delay:
+///
+/// ```
+/// # use netem_trace::model::LogNormalizedDelayPerPacketConfig;
+/// # use netem_trace::{Delay, DelayPerPacketTrace};
+/// let mut log_normal_delay = LogNormalizedDelayPerPacketConfig::new()
+///     .mean(Delay::from_millis(12))
+///     .std_dev(Delay::from_millis(1))
+///     .count(3)
+///     .seed(42)
+///     .upper_bound(Delay::from_micros(12100))
+///     .lower_bound(Delay::from_micros(11900))
+///     .build();
+/// assert_eq!(log_normal_delay.next_delay(), Some(Delay::from_nanos(12027817)));
+/// assert_eq!(log_normal_delay.next_delay(), Some(Delay::from_nanos(12091533)));
+/// assert_eq!(log_normal_delay.next_delay(), Some(Delay::from_nanos(12100000)));
+/// assert_eq!(log_normal_delay.next_delay(), None);
+/// ```
+#[derive(Debug, Clone)]
+pub struct LogNormalizedDelayPerPacket {
+    pub mean: Delay,
+    pub std_dev: Delay,
+    pub upper_bound: Option<Delay>,
+    pub lower_bound: Delay,
+    pub seed: u64,
+    pub count: usize,
+    current_count: usize,
+    rng: StdRng,
+    log_normal: LogNormal<f64>,
+}
+
+/// The configuration struct for [`LogNormalizedDelayPerPacket`].
+///
+/// See [`LogNormalizedDelayPerPacket`] for more details.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
+#[derive(Debug, Clone, Default)]
+pub struct LogNormalizedDelayPerPacketConfig {
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "humantime_serde")
+    )]
+    pub mean: Option<Delay>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "humantime_serde")
+    )]
+    pub std_dev: Option<Delay>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "humantime_serde")
+    )]
+    pub upper_bound: Option<Delay>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "humantime_serde")
+    )]
+    pub lower_bound: Option<Delay>,
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub count: usize,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub seed: Option<u64>,
+}
 
 impl DelayPerPacketTrace for StaticDelayPerPacket {
     fn next_delay(&mut self) -> Option<Delay> {
@@ -344,6 +435,23 @@ impl DelayPerPacketTrace for NormalizedDelayPerPacket {
         } else {
             self.current_count += 1;
             let delay = self.normal.sample(&mut self.rng).max(0.0);
+            let mut delay = Delay::from_secs_f64(delay);
+            delay = delay.max(self.lower_bound);
+            if let Some(upper_bound) = self.upper_bound {
+                delay = delay.min(upper_bound);
+            }
+            Some(delay)
+        }
+    }
+}
+
+impl DelayPerPacketTrace for LogNormalizedDelayPerPacket {
+    fn next_delay(&mut self) -> Option<Delay> {
+        if self.count != 0 && self.count == self.current_count {
+            None
+        } else {
+            self.current_count += 1;
+            let delay = self.log_normal.sample(&mut self.rng).max(0.0);
             let mut delay = Delay::from_secs_f64(delay);
             delay = delay.max(self.lower_bound);
             if let Some(upper_bound) = self.upper_bound {
@@ -546,6 +654,83 @@ impl NormalizedDelayPerPacketConfig {
         self.build()
     }
 }
+
+impl LogNormalizedDelayPerPacketConfig {
+    pub fn new() -> Self {
+        Self {
+            mean: None,
+            std_dev: None,
+            upper_bound: None,
+            lower_bound: None,
+            count: 0,
+            seed: None,
+        }
+    }
+
+    pub fn mean(mut self, mean: Delay) -> Self {
+        self.mean = Some(mean);
+        self
+    }
+
+    pub fn std_dev(mut self, std_dev: Delay) -> Self {
+        self.std_dev = Some(std_dev);
+        self
+    }
+
+    pub fn upper_bound(mut self, upper_bound: Delay) -> Self {
+        self.upper_bound = Some(upper_bound);
+        self
+    }
+
+    pub fn lower_bound(mut self, lower_bound: Delay) -> Self {
+        self.lower_bound = Some(lower_bound);
+        self
+    }
+
+    pub fn count(mut self, count: usize) -> Self {
+        self.count = count;
+        self
+    }
+
+    pub fn seed(mut self, seed: u64) -> Self {
+        self.seed = Some(seed);
+        self
+    }
+
+    pub fn random_seed(mut self) -> Self {
+        self.seed = Some(rand::random());
+        self
+    }
+
+    pub fn build(&self) -> LogNormalizedDelayPerPacket {
+        let mean = self.mean.unwrap_or_else(|| Delay::from_millis(10));
+        let std_dev = self.std_dev.unwrap_or(Delay::ZERO);
+        let upper_bound = self.upper_bound;
+        let lower_bound = self.lower_bound.unwrap_or(Delay::ZERO);
+        let count = self.count;
+        let seed = self.seed.unwrap_or(DEFAULT_RNG_SEED);
+        let rng = StdRng::seed_from_u64(seed);
+        let delay_mean = mean.as_secs_f64();
+        let delay_std_dev = std_dev.as_secs_f64();
+        let normal_std_dev = f64::sqrt(f64::ln(
+            1.0 + (delay_std_dev.powi(2)) / (delay_mean.powi(2)),
+        ));
+        let normal_mean = f64::ln(delay_mean) - normal_std_dev.powi(2) / 2.;
+        let log_normal: LogNormal<f64> = LogNormal::new(normal_mean, normal_std_dev).unwrap();
+        LogNormalizedDelayPerPacket {
+            mean,
+            std_dev,
+            upper_bound,
+            lower_bound,
+            count,
+            current_count: 0,
+            seed,
+            rng,
+            log_normal,
+        }
+    }
+}
+
 macro_rules! impl_delay_per_packet_trace_config {
     ($name:ident) => {
         #[cfg_attr(feature = "serde", typetag::serde)]
@@ -559,6 +744,7 @@ macro_rules! impl_delay_per_packet_trace_config {
 
 impl_delay_per_packet_trace_config!(StaticDelayPerPacketConfig);
 impl_delay_per_packet_trace_config!(NormalizedDelayPerPacketConfig);
+impl_delay_per_packet_trace_config!(LogNormalizedDelayPerPacketConfig);
 impl_delay_per_packet_trace_config!(RepeatedDelayPerPacketPatternConfig);
 
 /// Turn a [`DelayPerPacketTraceConfig`] into a forever repeated [`RepeatedDelayPerPacketPatternConfig`].
