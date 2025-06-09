@@ -1,21 +1,8 @@
 # CHANGELOG
 
-## Unreleased
-
-### What's Changed
-
-* add per-packet delay models by @maxime-bruno in https://github.com/stack-rs/netem-trace/pull/21
-
-### Feature
-
-- model:
-  - Add `DelayPerPacket` model ([38d0f70](https://github.com/stack-rs/netem-trace/commit/38d0f7068512d859901c35ba4e4750cad9c56c1a))
-
-
 ## [v0.4.0](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.0) - 2025-01-24 05:15:54
 
 ## What's Changed
-
 * feat(model): simplify de/ser of TraceBw model
 
 
