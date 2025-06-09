@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install latest stable
         uses: dtolnay/rust-toolchain@stable
@@ -26,7 +26,7 @@ jobs:
           toolchain: stable
 
       - name: deal with rust cache
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: cargo check
         run: cargo check --all-targets --all-features --workspace
@@ -36,7 +36,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install latest stable
         uses: dtolnay/rust-toolchain@stable
@@ -44,7 +44,7 @@ jobs:
           toolchain: stable
 
       - name: deal with rust cache
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: cargo build
         run: cargo build --all-features
@@ -54,7 +54,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install latest stable
         uses: dtolnay/rust-toolchain@stable
@@ -63,7 +63,7 @@ jobs:
           components: clippy
 
       - name: deal with rust cache
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
       - run: cargo clippy --workspace --all-features --tests -- -Dwarnings
 
       # temporarily change to a self-maintained workflow
@@ -79,7 +79,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install latest stable
         uses: dtolnay/rust-toolchain@stable
@@ -88,7 +88,7 @@ jobs:
           components: rustfmt
 
       - name: deal with rust cache
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: cargo fmt
         run: cargo fmt --all -- --check
