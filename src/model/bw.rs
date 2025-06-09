@@ -57,8 +57,7 @@
 //! ```
 use crate::{Bandwidth, BwTrace, Duration};
 use dyn_clone::DynClone;
-use rand::rngs::StdRng;
-use rand::SeedableRng;
+use rand::{rngs::StdRng, RngCore, SeedableRng};
 use rand_distr::{Distribution, Normal};
 
 const DEFAULT_RNG_SEED: u64 = 42;
@@ -162,7 +161,10 @@ pub struct StaticBwConfig {
 /// assert_eq!(normal_bw.next_bw(), Some((Bandwidth::from_bps(12100000), Duration::from_millis(100))));
 /// ```
 #[derive(Debug, Clone)]
-pub struct NormalizedBw {
+pub struct NormalizedBw<Rng = StdRng>
+where
+    Rng: RngCore,
+{
     pub mean: Bandwidth,
     pub std_dev: Bandwidth,
     pub upper_bound: Option<Bandwidth>,
@@ -170,7 +172,7 @@ pub struct NormalizedBw {
     pub duration: Duration,
     pub step: Duration,
     pub seed: u64,
-    rng: StdRng,
+    rng: Rng,
     normal: Normal<f64>,
 }
 
@@ -317,7 +319,10 @@ pub struct NormalizedBwConfig {
 /// );
 /// ```
 #[derive(Debug, Clone)]
-pub struct SawtoothBw {
+pub struct SawtoothBw<Rng = StdRng>
+where
+    Rng: RngCore,
+{
     pub bottom: Bandwidth,
     pub top: Bandwidth,
     pub interval: Duration,
@@ -329,7 +334,7 @@ pub struct SawtoothBw {
     pub upper_noise_bound: Option<Bandwidth>,
     pub lower_noise_bound: Option<Bandwidth>,
     current: Duration,
-    rng: StdRng,
+    rng: Rng,
     noise: Normal<f64>,
 }
 
@@ -768,7 +773,7 @@ impl BwTrace for StaticBw {
     }
 }
 
-impl BwTrace for NormalizedBw {
+impl<Rng: RngCore + Send> BwTrace for NormalizedBw<Rng> {
     fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
         if self.duration.is_zero() {
             None
@@ -788,7 +793,7 @@ impl BwTrace for NormalizedBw {
     }
 }
 
-impl BwTrace for SawtoothBw {
+impl<Rng: RngCore + Send> BwTrace for SawtoothBw<Rng> {
     fn next_bw(&mut self) -> Option<(Bandwidth, Duration)> {
         if self.duration.is_zero() {
             None
@@ -870,7 +875,7 @@ impl BwTrace for TraceBw {
     }
 }
 
-impl NormalizedBw {
+impl<Rng: RngCore> NormalizedBw<Rng> {
     pub fn sample(&mut self) -> f64 {
         self.normal.sample(&mut self.rng)
     }
@@ -912,6 +917,7 @@ macro_rules! saturating_bandwidth_as_bps_u64 {
 }
 
 impl NormalizedBwConfig {
+    /// Creates an uninitialized config
     pub fn new() -> Self {
         Self {
             mean: None,
@@ -924,42 +930,119 @@ impl NormalizedBwConfig {
         }
     }
 
+    /// Sets the mean
+    ///
+    /// If the mean is not set, 12Mbps will be used.
     pub fn mean(mut self, mean: Bandwidth) -> Self {
         self.mean = Some(mean);
         self
     }
 
+    /// Sets the standard deviation
+    ///
+    /// If the standard deviation is not set, 0Mbps will be used.
     pub fn std_dev(mut self, std_dev: Bandwidth) -> Self {
         self.std_dev = Some(std_dev);
         self
     }
 
+    /// Sets the upper bound
+    ///
+    /// If the upper bound is not set, the upper bound will be the one of [`Bandwidth`].
     pub fn upper_bound(mut self, upper_bound: Bandwidth) -> Self {
         self.upper_bound = Some(upper_bound);
         self
     }
 
+    /// Sets the lower bound
+    ///
+    /// If the lower bound is not set, the lower bound will be the one of [`Bandwidth`].
     pub fn lower_bound(mut self, lower_bound: Bandwidth) -> Self {
         self.lower_bound = Some(lower_bound);
         self
     }
 
+    /// Sets the total duration of the trace
+    ///
+    /// If the total duration is not set, 1 second will be used.
     pub fn duration(mut self, duration: Duration) -> Self {
         self.duration = Some(duration);
         self
     }
 
+    /// Sets the duration of each value
+    ///
+    /// If the step is not set, 1ms will be used.
     pub fn step(mut self, step: Duration) -> Self {
         self.step = Some(step);
         self
     }
 
+    /// Set the seed for a random generator
+    ///
+    /// If the seed is not set, `42` will be used.
     pub fn seed(mut self, seed: u64) -> Self {
         self.seed = Some(seed);
         self
     }
 
+    /// Allows to use a randomly generated seed
+    ///
+    /// This is equivalent to: `self.seed(rand::random())`
+    pub fn random_seed(mut self) -> Self {
+        self.seed = Some(rand::random());
+        self
+    }
+
+    /// Creates a new [`NormalizedBw`] corresponding to this config.
+    ///
+    /// The created model will use [`StdRng`] as source of randomness (the call is equivalent to `self.build_with_rng::<StdRng>()`).
+    /// It should be sufficient for most cases, but [`StdRng`] is not a portable random number generator,
+    /// so one may want to use a portable random number generator like [`ChaCha`](https://crates.io/crates/rand_chacha),
+    /// to this end one can use [`build_with_rng`](Self::build_with_rng).
     pub fn build(self) -> NormalizedBw {
+        self.build_with_rng()
+    }
+
+    /// Creates a new [`NormalizedBw`] corresponding to this config.
+    ///
+    /// Unlike [`build`](Self::build), this method let you choose the random generator.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use netem_trace::model::NormalizedBwConfig;
+    /// # use netem_trace::{Bandwidth, BwTrace};
+    /// # use std::time::Duration;
+    /// # use rand::rngs::StdRng;
+    /// # use rand_chacha::ChaCha20Rng;
+    ///
+    /// let normal_bw = NormalizedBwConfig::new()
+    ///     .mean(Bandwidth::from_mbps(12))
+    ///     .std_dev(Bandwidth::from_mbps(1))
+    ///     .duration(Duration::from_millis(3))
+    ///     .seed(42);
+    ///
+    /// let mut default_build = normal_bw.clone().build();
+    /// let mut std_build = normal_bw.clone().build_with_rng::<StdRng>();
+    /// // ChaCha is deterministic and portable, unlike StdRng
+    /// let mut chacha_build = normal_bw.clone().build_with_rng::<ChaCha20Rng>();
+    ///
+    /// for cha in [12044676, 11754367, 11253775] {
+    ///     let default = default_build.next_bw();
+    ///     let std = std_build.next_bw();
+    ///     let chacha = chacha_build.next_bw();
+    ///
+    ///     assert!(default.is_some());
+    ///     assert_eq!(default, std);
+    ///     assert_ne!(default, chacha);
+    ///     assert_eq!(chacha, Some((Bandwidth::from_bps(cha), Duration::from_millis(1))));
+    /// }
+    ///
+    /// assert_eq!(default_build.next_bw(), None);
+    /// assert_eq!(std_build.next_bw(), None);
+    /// assert_eq!(chacha_build.next_bw(), None);
+    /// ```
+    pub fn build_with_rng<Rng: SeedableRng + RngCore>(self) -> NormalizedBw<Rng> {
         let mean = self.mean.unwrap_or_else(|| Bandwidth::from_mbps(12));
         let std_dev = self.std_dev.unwrap_or_else(|| Bandwidth::from_mbps(0));
         let upper_bound = self.upper_bound;
@@ -967,7 +1050,7 @@ impl NormalizedBwConfig {
         let duration = self.duration.unwrap_or_else(|| Duration::from_secs(1));
         let step = self.step.unwrap_or_else(|| Duration::from_millis(1));
         let seed = self.seed.unwrap_or(DEFAULT_RNG_SEED);
-        let rng = StdRng::seed_from_u64(seed);
+        let rng = Rng::seed_from_u64(seed);
         let bw_mean = saturating_bandwidth_as_bps_u64!(mean) as f64;
         let bw_std_dev = saturating_bandwidth_as_bps_u64!(std_dev) as f64;
         let normal: Normal<f64> = Normal::new(bw_mean, bw_std_dev).unwrap();
@@ -1034,7 +1117,14 @@ impl NormalizedBwConfig {
     /// assert_eq!(avg_mbps(truncate_build), 11.978819427569897);
     ///
     /// ```
-    pub fn build_truncated(mut self) -> NormalizedBw {
+    pub fn build_truncated(self) -> NormalizedBw {
+        self.build_truncated_with_rng()
+    }
+
+    /// Similar to [`build_truncated`](Self::build_truncated) but let you choose the random generator.
+    ///
+    /// See [`build`](Self::build) for details about the reason for using another random number generator than [`StdRng`].
+    pub fn build_truncated_with_rng<Rng: SeedableRng + RngCore>(mut self) -> NormalizedBw<Rng> {
         let mean = self
             .mean
             .unwrap_or_else(|| Bandwidth::from_mbps(12))
@@ -1052,11 +1142,12 @@ impl NormalizedBwConfig {
         let upper = self.upper_bound.map(|upper| upper.as_gbps_f64() / mean);
         let new_mean = mean * solve(1f64, sigma, Some(lower), upper).unwrap_or(1f64);
         self.mean = Some(Bandwidth::from_gbps_f64(new_mean));
-        self.build()
+        self.build_with_rng()
     }
 }
 
 impl SawtoothBwConfig {
+    /// Creates an uninitialized config
     pub fn new() -> Self {
         Self {
             bottom: None,
@@ -1092,21 +1183,41 @@ impl SawtoothBwConfig {
         self
     }
 
+    /// Sets the total duration of the trace
+    ///
+    /// If the total duration is not set, 1 second will be used.
     pub fn duration(mut self, duration: Duration) -> Self {
         self.duration = Some(duration);
         self
     }
 
+    /// Sets the duration of each value
+    ///
+    /// If the step is not set, 1ms will be used.
     pub fn step(mut self, step: Duration) -> Self {
         self.step = Some(step);
         self
     }
 
+    /// Set the seed for a random generator
+    ///
+    /// If the seed is not set, `42` will be used.
     pub fn seed(mut self, seed: u64) -> Self {
         self.seed = Some(seed);
         self
     }
 
+    /// Allows to use a randomly generated seed
+    ///
+    /// This is equivalent to: `self.seed(rand::random())`
+    pub fn random_seed(mut self) -> Self {
+        self.seed = Some(rand::random());
+        self
+    }
+
+    /// Sets the standard deviation
+    ///
+    /// If the standard deviation is not set, 0Mbps will be used.
     pub fn std_dev(mut self, std_dev: Bandwidth) -> Self {
         self.std_dev = Some(std_dev);
         self
@@ -1122,7 +1233,58 @@ impl SawtoothBwConfig {
         self
     }
 
+    /// Creates a new [`SawtoothBw`] corresponding to this config.
+    ///
+    /// The created model will use [`StdRng`] as source of randomness (the call is equivalent to `self.build_with_rng::<StdRng>()`).
+    /// It should be sufficient for most cases, but [`StdRng`] is not a portable random number generator,
+    /// so one may want to use a portable random number generator like [`ChaCha`](https://crates.io/crates/rand_chacha),
+    /// to this end one can use [`build_with_rng`](Self::build_with_rng).
     pub fn build(self) -> SawtoothBw {
+        self.build_with_rng()
+    }
+
+    /// Creates a new [`SawtoothBw`] corresponding to this config.
+    ///
+    /// Unlike [`build`](Self::build), this method let you choose the random generator.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use netem_trace::model::SawtoothBwConfig;
+    /// # use netem_trace::{Bandwidth, BwTrace};
+    /// # use std::time::Duration;
+    /// # use rand::rngs::StdRng;
+    /// # use rand_chacha::ChaCha20Rng;
+    ///
+    /// let sawtooth_bw = SawtoothBwConfig::new()
+    ///     .bottom(Bandwidth::from_mbps(12))
+    ///     .top(Bandwidth::from_mbps(16))
+    ///     .std_dev(Bandwidth::from_mbps(1))
+    ///     .duration(Duration::from_millis(3))
+    ///     .interval(Duration::from_millis(5))
+    ///     .duty_ratio(0.8)
+    ///     .seed(42);
+    ///
+    /// let mut default_build = sawtooth_bw.clone().build();
+    /// let mut std_build = sawtooth_bw.clone().build_with_rng::<StdRng>();
+    /// // ChaCha is deterministic and portable, unlike StdRng
+    /// let mut chacha_build = sawtooth_bw.clone().build_with_rng::<ChaCha20Rng>();
+    ///
+    /// for cha in [12044676, 12754367, 13253775] {
+    ///     let default = default_build.next_bw();
+    ///     let std = std_build.next_bw();
+    ///     let chacha = chacha_build.next_bw();
+    ///
+    ///     assert!(default.is_some());
+    ///     assert_eq!(default, std);
+    ///     assert_ne!(default, chacha);
+    ///     assert_eq!(chacha, Some((Bandwidth::from_bps(cha), Duration::from_millis(1))));
+    /// }
+    ///
+    /// assert_eq!(default_build.next_bw(), None);
+    /// assert_eq!(std_build.next_bw(), None);
+    /// assert_eq!(chacha_build.next_bw(), None);
+    /// ```
+    pub fn build_with_rng<Rng: RngCore + SeedableRng>(self) -> SawtoothBw<Rng> {
         let bottom = self.bottom.unwrap_or_else(|| Bandwidth::from_mbps(0));
         let top = self.top.unwrap_or_else(|| Bandwidth::from_mbps(12));
         if bottom > top {
@@ -1133,7 +1295,7 @@ impl SawtoothBwConfig {
         let duration = self.duration.unwrap_or_else(|| Duration::from_secs(1));
         let step = self.step.unwrap_or_else(|| Duration::from_millis(1));
         let seed = self.seed.unwrap_or(DEFAULT_RNG_SEED);
-        let rng = StdRng::seed_from_u64(seed);
+        let rng = Rng::seed_from_u64(seed);
         let std_dev = self.std_dev.unwrap_or_else(|| Bandwidth::from_mbps(0));
         let upper_noise_bound = self.upper_noise_bound;
         let lower_noise_bound = self.lower_noise_bound;
