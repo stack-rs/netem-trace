@@ -480,7 +480,7 @@ impl StaticDelayPerPacketConfig {
         self
     }
 
-    pub fn build(&self) -> StaticDelayPerPacket {
+    pub fn build(self) -> StaticDelayPerPacket {
         StaticDelayPerPacket {
             delay: self.delay.unwrap_or_else(|| Delay::from_millis(10)),
             count: self.count,
@@ -565,7 +565,7 @@ impl NormalizedDelayPerPacketConfig {
         self
     }
 
-    pub fn build(&self) -> NormalizedDelayPerPacket {
+    pub fn build(self) -> NormalizedDelayPerPacket {
         let mean = self.mean.unwrap_or_else(|| Delay::from_millis(10));
         let std_dev = self.std_dev.unwrap_or(Delay::ZERO);
         let upper_bound = self.upper_bound;
@@ -698,7 +698,7 @@ impl LogNormalizedDelayPerPacketConfig {
         self
     }
 
-    pub fn build(&self) -> LogNormalizedDelayPerPacket {
+    pub fn build(self) -> LogNormalizedDelayPerPacket {
         let mean = self.mean.unwrap_or_else(|| Delay::from_millis(10));
         let std_dev = self.std_dev.unwrap_or(Delay::ZERO);
         let upper_bound = self.upper_bound;
