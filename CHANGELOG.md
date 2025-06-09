@@ -1,6 +1,26 @@
 # CHANGELOG
 
-## [v0.4.0](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.0) - 2025-01-24 05:15:54
+## [v0.4.1](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.1) - 2025-06-09 08:26:48+00:00
+
+## What's Changed
+* Adding a per-packet delay trace by @maxime-bruno in [#21](https://github.com/stack-rs/netem-trace/pull/21)
+
+## New Contributors
+* @maxime-bruno made their first contribution in [#21](https://github.com/stack-rs/netem-trace/pull/21)
+
+**Full Comparison**: https://github.com/stack-rs/netem-trace/compare/v0.4.0...v0.4.1
+
+### Feature
+
+- model:
+  - add a per-packet delay trace trait and models (#21) ([a1b4995](https://github.com/stack-rs/netem-trace/commit/a1b499550c9eb38d67732d6510393535a6b8e3f9)) ([#21](https://github.com/stack-rs/netem-trace/pull/21))
+
+### Documentation
+
+- readme:
+  - update contributors ([6af26ed](https://github.com/stack-rs/netem-trace/commit/6af26ed026a9cb3c9bc50a9c5479b04f06e0d0e8))
+
+## [v0.4.0](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.0) - 2025-01-24 05:15:54+00:00
 
 ## What's Changed
 * feat(model): simplify de/ser of TraceBw model
@@ -21,7 +41,7 @@
 - readme:
   - update contributors ([71197e9](https://github.com/stack-rs/netem-trace/commit/71197e94a70696a3105328013933a5cc25d93b0f))
 
-## [v0.3.6](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.6) - 2024-12-08 16:04:14
+## [v0.3.6](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.6) - 2024-12-08 16:04:14+00:00
 
 ## What's Changed
 
@@ -40,7 +60,7 @@
 - readme:
   - update contributors ([dd37e9c](https://github.com/stack-rs/netem-trace/commit/dd37e9cdaa842472788c32c06cee5394fbe44b89))
 
-## [v0.3.5](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.5) - 2024-12-06 05:17:25
+## [v0.3.5](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.5) - 2024-12-06 05:17:25+00:00
 
 ## What's Changed
 * Support TraceBwConfig model to replay any bandwidth trace by @Lethe10137 in https://github.com/stack-rs/netem-trace/pull/13
@@ -60,7 +80,7 @@
 - readme:
   - update contributors ([9b221cf](https://github.com/stack-rs/netem-trace/commit/9b221cf713c3142dbc30af00d86f66b26f70500c))
 
-## [v0.3.4](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.4) - 2024-06-30 08:37:28
+## [v0.3.4](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.4) - 2024-06-30 08:37:28+00:00
 
 ## What's Changed
 
