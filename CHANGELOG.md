@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [v0.4.2](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.2) - 2025-06-09 18:03:04+00:00
+
+### What's Changed
+* Support user choose random generators by @maxime-bruno in https://github.com/stack-rs/netem-trace/pull/22
+
+
+**Full Comparison**: https://github.com/stack-rs/netem-trace/compare/v0.4.1...v0.4.2
+
+### Feature
+
+- model:
+  - support user chose random generators (#22) ([d83af1d](https://github.com/stack-rs/netem-trace/commit/d83af1d4412d926a5d9c7ff86c0a7d44d90f306f)) ([#22](https://github.com/stack-rs/netem-trace/pull/22))
+
 ## [v0.4.1](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.1) - 2025-06-09 08:26:48+00:00
 
 ## What's Changed
@@ -81,25 +94,6 @@
   - update contributors ([9b221cf](https://github.com/stack-rs/netem-trace/commit/9b221cf713c3142dbc30af00d86f66b26f70500c))
 
 ## [v0.3.4](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.4) - 2024-06-30 08:37:28+00:00
-
-## What's Changed
-
-* add packet duplicate models by @un-lock-able in https://github.com/stack-rs/netem-trace/pull/11
-* fix typos in comments by @un-lock-able in https://github.com/stack-rs/netem-trace/pull/12
-
-## New Contributors
-
-* @un-lock-able made their first contribution in https://github.com/stack-rs/netem-trace/pull/11
-
-### Feature
-
-- model:
-  - add packet duplicate models ([dedcb15](https://github.com/stack-rs/netem-trace/commit/dedcb15b180db3043fbf901d7b31358e0c347032)) ([#11](https://github.com/stack-rs/netem-trace/pull/11))
-
-### Documentation
-
-- readme:
-  - correct the examples ([fa5fd48](https://github.com/stack-rs/netem-trace/commit/fa5fd48752c686e05cec3998c8d3385b25c0a4a6))
 
 ## [v0.3.3](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.3) - 2024-06-25 12:21:00
 
