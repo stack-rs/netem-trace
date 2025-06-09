@@ -58,7 +58,7 @@
 use crate::{Delay, DelayPerPacketTrace};
 use dyn_clone::DynClone;
 
-const DEFAULT_RNG_SEED: u64 = 42;
+const DEFAULT_RNG_SEED: u64 = 42; // Some documentation will need corrections if this changes
 
 /// This trait is used to convert a per-packet delay trace configuration into a per-packet delay trace model.
 ///
@@ -73,7 +73,7 @@ pub trait DelayPerPacketTraceConfig: DynClone + Send {
 
 dyn_clone::clone_trait_object!(DelayPerPacketTraceConfig);
 
-use rand::{rngs::StdRng, SeedableRng as _};
+use rand::{rngs::StdRng, RngCore, SeedableRng};
 use rand_distr::{Distribution, LogNormal, Normal};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -251,7 +251,10 @@ pub struct RepeatedDelayPerPacketPatternConfig {
 /// assert_eq!(normal_delay.next_delay(), None);
 /// ```
 #[derive(Debug, Clone)]
-pub struct NormalizedDelayPerPacket {
+pub struct NormalizedDelayPerPacket<Rng = StdRng>
+where
+    Rng: RngCore,
+{
     pub mean: Delay,
     pub std_dev: Delay,
     pub upper_bound: Option<Delay>,
@@ -259,7 +262,7 @@ pub struct NormalizedDelayPerPacket {
     pub seed: u64,
     pub count: usize,
     current_count: usize,
-    rng: StdRng,
+    rng: Rng,
     normal: Normal<f64>,
 }
 
@@ -342,7 +345,10 @@ pub struct NormalizedDelayPerPacketConfig {
 /// assert_eq!(log_normal_delay.next_delay(), None);
 /// ```
 #[derive(Debug, Clone)]
-pub struct LogNormalizedDelayPerPacket {
+pub struct LogNormalizedDelayPerPacket<Rng = StdRng>
+where
+    Rng: RngCore,
+{
     pub mean: Delay,
     pub std_dev: Delay,
     pub upper_bound: Option<Delay>,
@@ -350,7 +356,7 @@ pub struct LogNormalizedDelayPerPacket {
     pub seed: u64,
     pub count: usize,
     current_count: usize,
-    rng: StdRng,
+    rng: Rng,
     log_normal: LogNormal<f64>,
 }
 
@@ -428,7 +434,7 @@ impl DelayPerPacketTrace for RepeatedDelayPerPacketPattern {
     }
 }
 
-impl DelayPerPacketTrace for NormalizedDelayPerPacket {
+impl<Rng: RngCore + Send> DelayPerPacketTrace for NormalizedDelayPerPacket<Rng> {
     fn next_delay(&mut self) -> Option<Delay> {
         if self.count != 0 && self.count == self.current_count {
             None
@@ -445,7 +451,7 @@ impl DelayPerPacketTrace for NormalizedDelayPerPacket {
     }
 }
 
-impl DelayPerPacketTrace for LogNormalizedDelayPerPacket {
+impl<Rng: RngCore + Send> DelayPerPacketTrace for LogNormalizedDelayPerPacket<Rng> {
     fn next_delay(&mut self) -> Option<Delay> {
         if self.count != 0 && self.count == self.current_count {
             None
@@ -519,6 +525,7 @@ impl RepeatedDelayPerPacketPatternConfig {
 }
 
 impl NormalizedDelayPerPacketConfig {
+    /// Creates an uninitialized config
     pub fn new() -> Self {
         Self {
             mean: None,
@@ -530,49 +537,117 @@ impl NormalizedDelayPerPacketConfig {
         }
     }
 
+    /// Sets the mean
+    ///
+    /// If the mean is not set, 10ms will be used.
     pub fn mean(mut self, mean: Delay) -> Self {
         self.mean = Some(mean);
         self
     }
 
+    /// Sets the standard deviation
+    ///
+    /// If the standard deviation is not set, 0ms will be used.
     pub fn std_dev(mut self, std_dev: Delay) -> Self {
         self.std_dev = Some(std_dev);
         self
     }
 
+    /// Sets the upper bound
+    ///
+    /// If the upper bound is not set, the upper bound will be the one of [`Delay`].
     pub fn upper_bound(mut self, upper_bound: Delay) -> Self {
         self.upper_bound = Some(upper_bound);
         self
     }
 
+    /// Sets the lower bound
+    ///
+    /// If the lower bound is not set, 0ms will be used.
     pub fn lower_bound(mut self, lower_bound: Delay) -> Self {
         self.lower_bound = Some(lower_bound);
         self
     }
 
+    /// Sets the number of packets to repeat
+    ///
+    /// If the count is not set, it will be set to 0 (ie, infinite repeat).
     pub fn count(mut self, count: usize) -> Self {
         self.count = count;
         self
     }
 
+    /// Set the seed for a random generator
+    ///
+    /// If the seed is not set, `42` will be used.
     pub fn seed(mut self, seed: u64) -> Self {
         self.seed = Some(seed);
         self
     }
 
+    /// Allows to use a randomly generated seed
+    ///
+    /// This is equivalent to: `self.seed(rand::random())`
     pub fn random_seed(mut self) -> Self {
         self.seed = Some(rand::random());
         self
     }
 
+    /// Creates a new [`NormalizedDelayPerPacket`] corresponding to this config.
+    ///
+    /// The created model will use [`StdRng`] as source of randomness (the call is equivalent to `self.build_with_rng::<StdRng>()`).
+    /// It should be sufficient for most cases, but [`StdRng`] is not a portable random number generator,
+    /// so one may want to use a portable random number generator like [`ChaCha`](https://crates.io/crates/rand_chacha),
+    /// to this end one can use [`build_with_rng`](Self::build_with_rng).
     pub fn build(self) -> NormalizedDelayPerPacket {
+        self.build_with_rng()
+    }
+
+    /// Creates a new [`NormalizedDelayPerPacket`] corresponding to this config.
+    ///
+    /// Unlike [`build`](Self::build), this method let you choose the random generator.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use netem_trace::model::NormalizedDelayPerPacketConfig;
+    /// # use netem_trace::{Delay, DelayPerPacketTrace};
+    /// # use rand::rngs::StdRng;
+    /// # use rand_chacha::ChaCha20Rng;
+    ///
+    /// let normal_delay = NormalizedDelayPerPacketConfig::new()
+    ///     .mean(Delay::from_millis(12))
+    ///     .std_dev(Delay::from_millis(1))
+    ///     .count(3)
+    ///     .seed(42);
+    ///
+    /// let mut default_build = normal_delay.clone().build();
+    /// let mut std_build = normal_delay.clone().build_with_rng::<StdRng>();
+    /// // ChaCha is deterministic and portable, unlike StdRng
+    /// let mut chacha_build = normal_delay.clone().build_with_rng::<ChaCha20Rng>();
+    ///
+    /// for cha in [12044676, 11754367, 11253775] {
+    ///     let default = default_build.next_delay();
+    ///     let std = std_build.next_delay();
+    ///     let chacha = chacha_build.next_delay();
+    ///
+    ///     assert!(default.is_some());
+    ///     assert_eq!(default, std);
+    ///     assert_ne!(default, chacha);
+    ///     assert_eq!(chacha, Some(Delay::from_nanos(cha)));
+    /// }
+    ///
+    /// assert_eq!(default_build.next_delay(), None);
+    /// assert_eq!(std_build.next_delay(), None);
+    /// assert_eq!(chacha_build.next_delay(), None);
+    /// ```
+    pub fn build_with_rng<Rng: RngCore + SeedableRng>(self) -> NormalizedDelayPerPacket<Rng> {
         let mean = self.mean.unwrap_or_else(|| Delay::from_millis(10));
         let std_dev = self.std_dev.unwrap_or(Delay::ZERO);
         let upper_bound = self.upper_bound;
         let lower_bound = self.lower_bound.unwrap_or(Delay::ZERO);
         let count = self.count;
         let seed = self.seed.unwrap_or(DEFAULT_RNG_SEED);
-        let rng = StdRng::seed_from_u64(seed);
+        let rng = Rng::seed_from_u64(seed);
         let delay_mean = mean.as_secs_f64();
         let delay_std_dev = std_dev.as_secs_f64();
         let normal: Normal<f64> = Normal::new(delay_mean, delay_std_dev).unwrap();
@@ -602,7 +677,7 @@ impl NormalizedDelayPerPacketConfig {
     ///
     /// # use netem_trace::model::NormalizedDelayPerPacketConfig;
     /// # use netem_trace::{Delay, DelayPerPacketTrace};
-    /// # use crate::netem_trace::model::Forever;
+    ///
     /// let normal_delay = NormalizedDelayPerPacketConfig::new()
     ///     .mean(Delay::from_millis(12))
     ///     .std_dev(Delay::from_millis(12))
@@ -637,7 +712,16 @@ impl NormalizedDelayPerPacketConfig {
     /// assert_eq!(avg_delay(truncate_build), Delay::from_nanos(11999151));
     ///
     /// ```
-    pub fn build_truncated(mut self) -> NormalizedDelayPerPacket {
+    pub fn build_truncated(self) -> NormalizedDelayPerPacket {
+        self.build_truncated_with_rng()
+    }
+
+    /// Similar to [`build_truncated`](Self::build_truncated) but let you choose the random generator.
+    ///
+    /// See [`build`](Self::build) for details about the reason for using another random number generator than [`StdRng`].
+    pub fn build_truncated_with_rng<Rng: SeedableRng + RngCore>(
+        mut self,
+    ) -> NormalizedDelayPerPacket<Rng> {
         let mean = self
             .mean
             .unwrap_or_else(|| Delay::from_millis(12))
@@ -647,11 +731,12 @@ impl NormalizedDelayPerPacketConfig {
         let upper = self.upper_bound.map(|upper| upper.as_secs_f64() / mean);
         let new_mean = mean * solve(1f64, sigma, Some(lower), upper).unwrap_or(1f64);
         self.mean = Some(Delay::from_secs_f64(new_mean));
-        self.build()
+        self.build_with_rng()
     }
 }
 
 impl LogNormalizedDelayPerPacketConfig {
+    /// Creates an uninitialized config
     pub fn new() -> Self {
         Self {
             mean: None,
@@ -663,56 +748,129 @@ impl LogNormalizedDelayPerPacketConfig {
         }
     }
 
+    /// Sets the mean
+    ///
+    /// If the mean is not set, 10ms will be used.
     pub fn mean(mut self, mean: Delay) -> Self {
         self.mean = Some(mean);
         self
     }
 
+    /// Sets the standard deviation
+    ///
+    /// If the standard deviation is not set, 0ms will be used.
     pub fn std_dev(mut self, std_dev: Delay) -> Self {
         self.std_dev = Some(std_dev);
         self
     }
 
+    /// Sets the upper bound
+    ///
+    /// If the upper bound is not set, the upper bound will be the one of [`Delay`].
     pub fn upper_bound(mut self, upper_bound: Delay) -> Self {
         self.upper_bound = Some(upper_bound);
         self
     }
 
+    /// Sets the lower bound
+    ///
+    /// If the lower bound is not set, 0ms will be used.
     pub fn lower_bound(mut self, lower_bound: Delay) -> Self {
         self.lower_bound = Some(lower_bound);
         self
     }
 
+    /// Sets the number of packets to repeat
+    ///
+    /// If the count is not set, it will be set to 0 (ie, infinite repeat).
     pub fn count(mut self, count: usize) -> Self {
         self.count = count;
         self
     }
 
+    /// Set the seed for a random generator
+    ///
+    /// If the seed is not set, `42` will be used.
     pub fn seed(mut self, seed: u64) -> Self {
         self.seed = Some(seed);
         self
     }
 
+    /// Allows to use a randomly generated seed
+    ///
+    /// This is equivalent to: `self.seed(rand::random())`
     pub fn random_seed(mut self) -> Self {
         self.seed = Some(rand::random());
         self
     }
 
+    /// Creates a new [`LogNormalizedDelayPerPacket`] corresponding to this config.
+    ///
+    /// The created model will use [`StdRng`] as source of randomness (the call is equivalent to `self.build_with_rng::<StdRng>()`).
+    /// It should be sufficient for most cases, but [`StdRng`] is not a portable random number generator,
+    /// so one may want to use a portable random number generator like [`ChaCha`](https://crates.io/crates/rand_chacha),
+    /// to this end one can use [`build_with_rng`](Self::build_with_rng).
     pub fn build(self) -> LogNormalizedDelayPerPacket {
+        self.build_with_rng()
+    }
+
+    /// Creates a new [`LogNormalizedDelayPerPacket`] corresponding to this config.
+    ///
+    /// Unlike [`build`](Self::build), this method let you choose the random generator.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use netem_trace::model::LogNormalizedDelayPerPacketConfig;
+    /// # use netem_trace::{Delay, DelayPerPacketTrace};
+    /// # use rand::rngs::StdRng;
+    /// # use rand_chacha::ChaCha20Rng;
+    ///
+    /// let log_normal_delay = LogNormalizedDelayPerPacketConfig::new()
+    ///     .mean(Delay::from_millis(12))
+    ///     .std_dev(Delay::from_millis(1))
+    ///     .count(3)
+    ///     .seed(42);
+    ///
+    /// let mut default_build = log_normal_delay.clone().build();
+    /// let mut std_build = log_normal_delay.clone().build_with_rng::<StdRng>();
+    /// // ChaCha is deterministic and portable, unlike StdRng
+    /// let mut chacha_build = log_normal_delay.clone().build_with_rng::<ChaCha20Rng>();
+    ///
+    /// for cha in [12003077, 11716668, 11238761] {
+    ///     let default = default_build.next_delay();
+    ///     let std = std_build.next_delay();
+    ///     let chacha = chacha_build.next_delay();
+    ///
+    ///     assert!(default.is_some());
+    ///     assert_eq!(default, std);
+    ///     assert_ne!(default, chacha);
+    ///     assert_eq!(chacha, Some(Delay::from_nanos(cha)));
+    /// }
+    ///
+    /// assert_eq!(default_build.next_delay(), None);
+    /// assert_eq!(std_build.next_delay(), None);
+    /// assert_eq!(chacha_build.next_delay(), None);
+    /// ```
+    pub fn build_with_rng<Rng: SeedableRng + RngCore>(self) -> LogNormalizedDelayPerPacket<Rng> {
         let mean = self.mean.unwrap_or_else(|| Delay::from_millis(10));
         let std_dev = self.std_dev.unwrap_or(Delay::ZERO);
         let upper_bound = self.upper_bound;
         let lower_bound = self.lower_bound.unwrap_or(Delay::ZERO);
         let count = self.count;
         let seed = self.seed.unwrap_or(DEFAULT_RNG_SEED);
-        let rng = StdRng::seed_from_u64(seed);
+        let rng = Rng::seed_from_u64(seed);
         let delay_mean = mean.as_secs_f64();
         let delay_std_dev = std_dev.as_secs_f64();
+
+        // Computing the mean and standard deviation of underlying normal Law
+        // Because Lognormal(μ , σ²) has a mean of exp(μ + σ²/2) and a standard deviation of sqrt((exp(σ²) - 1) exp(2μ + σ²))
+        // So we need to comput μ and σ, given the mean and standard deviation of the log-normal law
         let normal_std_dev = f64::sqrt(f64::ln(
             1.0 + (delay_std_dev.powi(2)) / (delay_mean.powi(2)),
         ));
         let normal_mean = f64::ln(delay_mean) - normal_std_dev.powi(2) / 2.;
         let log_normal: LogNormal<f64> = LogNormal::new(normal_mean, normal_std_dev).unwrap();
+
         LogNormalizedDelayPerPacket {
             mean,
             std_dev,
