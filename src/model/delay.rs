@@ -222,7 +222,7 @@ impl DelayTrace for RepeatedDelayPattern {
                 self.current_model = Some(self.pattern[self.current_pattern].clone().into_model());
             }
             match self.current_model.as_mut().unwrap().next_delay() {
-                Some(bw) => Some(bw),
+                Some(delay) => Some(delay),
                 None => {
                     self.current_model = None;
                     self.current_pattern += 1;

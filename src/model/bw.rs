@@ -989,7 +989,7 @@ impl NormalizedBwConfig {
 impl NormalizedBwConfig {
     /// This is another implementation for converting NormalizedBwConfig into NormalizedBw, where the impact
     /// of truncation (`lower_bound` and `upper_bound` field) on the mathematical expectation of the distribution
-    /// is taking account by modifing the center of the distribution.
+    /// is taking account by modifying the center of the distribution.
     ///
     /// ## Examples
     ///

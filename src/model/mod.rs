@@ -30,6 +30,20 @@ pub use delay::{DelayTraceConfig, RepeatedDelayPatternConfig, StaticDelayConfig}
 #[cfg(feature = "delay-model")]
 pub use delay::{RepeatedDelayPattern, StaticDelay};
 
+#[cfg(feature = "delay-per-packet-model")]
+pub mod delay_per_packet;
+
+#[cfg(feature = "delay-per-packet-model")]
+pub use delay_per_packet::{
+    DelayPerPacketTraceConfig, LogNormalizedDelayPerPacketConfig, NormalizedDelayPerPacketConfig,
+    RepeatedDelayPerPacketPatternConfig, StaticDelayPerPacketConfig,
+};
+#[cfg(feature = "delay-per-packet-model")]
+pub use delay_per_packet::{
+    LogNormalizedDelayPerPacket, NormalizedDelayPerPacket, RepeatedDelayPerPacketPattern,
+    StaticDelayPerPacket,
+};
+
 #[cfg(feature = "loss-model")]
 pub mod loss;
 
