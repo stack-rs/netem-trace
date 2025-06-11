@@ -67,7 +67,7 @@ const DEFAULT_RNG_SEED: u64 = 42; // Some documentation will need corrections if
 /// separate the configuration part into a simple struct for serialization/deserialization, and
 /// construct the model from the configuration.
 #[cfg_attr(feature = "serde", typetag::serde)]
-pub trait DelayPerPacketTraceConfig: DynClone + Send {
+pub trait DelayPerPacketTraceConfig: DynClone + Send + std::fmt::Debug {
     fn into_model(self: Box<Self>) -> Box<dyn DelayPerPacketTrace>;
 }
 
@@ -100,7 +100,7 @@ use super::solve_truncate::solve;
 /// assert_eq!(static_delay.next_delay(), Some(Delay::from_millis(10)));
 /// assert_eq!(static_delay.next_delay(), None);
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct StaticDelayPerPacket {
     pub delay: Delay,
     pub count: usize,
@@ -111,7 +111,7 @@ pub struct StaticDelayPerPacket {
 ///
 /// See [`StaticDelayPerPacket`] for more details.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
-#[derive(Debug, Clone, Default)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct StaticDelayPerPacketConfig {
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     #[cfg_attr(
@@ -191,6 +191,7 @@ pub struct StaticDelayPerPacketConfig {
 /// let json_str = "{\"RepeatedDelayPerPacketPatternConfig\":{\"pattern\":[{\"StaticDelayPerPacketConfig\":{\"delay\":{\"secs\":0,\"nanos\":10000000},\"count\":1}},{\"StaticDelayPerPacketConfig\":{\"delay\":{\"secs\":0,\"nanos\":20000000},\"count\":1}}],\"count\":2}}";
 /// assert_eq!(ser_str, json_str);
 /// ```
+#[derive(Default)]
 pub struct RepeatedDelayPerPacketPattern {
     pub pattern: Vec<Box<dyn DelayPerPacketTraceConfig>>,
     pub count: usize,
@@ -203,7 +204,7 @@ pub struct RepeatedDelayPerPacketPattern {
 ///
 /// See [`RepeatedDelayPerPacketPattern`] for more details.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
-#[derive(Default, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct RepeatedDelayPerPacketPatternConfig {
     pub pattern: Vec<Box<dyn DelayPerPacketTraceConfig>>,
     pub count: usize,
@@ -250,7 +251,7 @@ pub struct RepeatedDelayPerPacketPatternConfig {
 /// assert_eq!(normal_delay.next_delay(), Some(Delay::from_nanos(12100000)));
 /// assert_eq!(normal_delay.next_delay(), None);
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct NormalizedDelayPerPacket<Rng = StdRng>
 where
     Rng: RngCore,
@@ -270,7 +271,7 @@ where
 ///
 /// See [`NormalizedDelayPerPacket`] for more details.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
-#[derive(Debug, Clone, Default)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct NormalizedDelayPerPacketConfig {
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     #[cfg_attr(
@@ -344,7 +345,7 @@ pub struct NormalizedDelayPerPacketConfig {
 /// assert_eq!(log_normal_delay.next_delay(), Some(Delay::from_nanos(12100000)));
 /// assert_eq!(log_normal_delay.next_delay(), None);
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LogNormalizedDelayPerPacket<Rng = StdRng>
 where
     Rng: RngCore,
@@ -364,7 +365,7 @@ where
 ///
 /// See [`LogNormalizedDelayPerPacket`] for more details.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
-#[derive(Debug, Clone, Default)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct LogNormalizedDelayPerPacketConfig {
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     #[cfg_attr(
@@ -900,6 +901,12 @@ impl_delay_per_packet_trace_config!(StaticDelayPerPacketConfig);
 impl_delay_per_packet_trace_config!(NormalizedDelayPerPacketConfig);
 impl_delay_per_packet_trace_config!(LogNormalizedDelayPerPacketConfig);
 impl_delay_per_packet_trace_config!(RepeatedDelayPerPacketPatternConfig);
+
+impl<Model: DelayPerPacketTrace + 'static> From<Model> for Box<dyn DelayPerPacketTrace> {
+    fn from(model: Model) -> Self {
+        Box::new(model)
+    }
+}
 
 /// Turn a [`DelayPerPacketTraceConfig`] into a forever repeated [`RepeatedDelayPerPacketPatternConfig`].
 pub trait Forever: DelayPerPacketTraceConfig {
