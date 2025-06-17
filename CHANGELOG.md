@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [v0.4.3](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.3) - 2025-06-17 07:16:34+00:00
+
+### What's Changed
+* Adding minor trait to delay per-packet config by @maxime-bruno in https://github.com/stack-rs/netem-trace/pull/23
+
+
+**Full Comparison**: https://github.com/stack-rs/netem-trace/compare/v0.4.2...v0.4.3
+
+### Feature
+
+- model:
+  - add traits to delay-per-packet config (#23) ([17d68ea](https://github.com/stack-rs/netem-trace/commit/17d68eaa0a47fd05537db4195435407636ac96c3)) ([#23](https://github.com/stack-rs/netem-trace/pull/23))
+
 ## [v0.4.2](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.2) - 2025-06-09 18:03:04+00:00
 
 ### What's Changed
@@ -74,24 +87,6 @@
   - update contributors ([dd37e9c](https://github.com/stack-rs/netem-trace/commit/dd37e9cdaa842472788c32c06cee5394fbe44b89))
 
 ## [v0.3.5](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.5) - 2024-12-06 05:17:25+00:00
-
-## What's Changed
-* Support TraceBwConfig model to replay any bandwidth trace by @Lethe10137 in https://github.com/stack-rs/netem-trace/pull/13
-
-## New Contributors
-* @Lethe10137 made their first contribution in https://github.com/stack-rs/netem-trace/pull/13
-
-**Full Changelog**: https://github.com/stack-rs/netem-trace/compare/v0.3.4...v0.3.5
-
-### Feature
-
-- model:
-  - add bandwidth trace replay model (#13) ([1cd2019](https://github.com/stack-rs/netem-trace/commit/1cd20192da9660b1195a5bb0de108de5ba316079)) ([#13](https://github.com/stack-rs/netem-trace/pull/13))
-
-### Documentation
-
-- readme:
-  - update contributors ([9b221cf](https://github.com/stack-rs/netem-trace/commit/9b221cf713c3142dbc30af00d86f66b26f70500c))
 
 ## [v0.3.4](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.4) - 2024-06-30 08:37:28+00:00
 
