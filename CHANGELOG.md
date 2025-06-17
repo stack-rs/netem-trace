@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [v0.4.3](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.3) - 2025-06-17 07:16:34+00:00
+## [v0.4.3](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.3) - 2025-06-17 08:07:38+00:00
 
 ### What's Changed
 * Adding minor trait to delay per-packet config by @maxime-bruno in https://github.com/stack-rs/netem-trace/pull/23
