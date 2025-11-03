@@ -399,8 +399,7 @@ pub fn write_bw_series_json<P: AsRef<std::path::Path>>(
     series: &[BwSeriesPoint],
     path: P,
 ) -> std::io::Result<()> {
-    let json = serde_json::to_string_pretty(series)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    let json = serde_json::to_string_pretty(series).map_err(std::io::Error::other)?;
     std::fs::write(path, json)
 }
 
@@ -438,8 +437,7 @@ pub fn write_delay_series_json<P: AsRef<std::path::Path>>(
     series: &[DelaySeriesPoint],
     path: P,
 ) -> std::io::Result<()> {
-    let json = serde_json::to_string_pretty(series)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    let json = serde_json::to_string_pretty(series).map_err(std::io::Error::other)?;
     std::fs::write(path, json)
 }
 
@@ -472,8 +470,7 @@ pub fn write_delay_per_packet_series_json<P: AsRef<std::path::Path>>(
     series: &[DelayPerPacketSeriesPoint],
     path: P,
 ) -> std::io::Result<()> {
-    let json = serde_json::to_string_pretty(series)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    let json = serde_json::to_string_pretty(series).map_err(std::io::Error::other)?;
     std::fs::write(path, json)
 }
 
@@ -500,8 +497,7 @@ pub fn write_loss_series_json<P: AsRef<std::path::Path>>(
     series: &[LossSeriesPoint],
     path: P,
 ) -> std::io::Result<()> {
-    let json = serde_json::to_string_pretty(series)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    let json = serde_json::to_string_pretty(series).map_err(std::io::Error::other)?;
     std::fs::write(path, json)
 }
 
@@ -542,8 +538,7 @@ pub fn write_duplicate_series_json<P: AsRef<std::path::Path>>(
     series: &[DuplicateSeriesPoint],
     path: P,
 ) -> std::io::Result<()> {
-    let json = serde_json::to_string_pretty(series)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    let json = serde_json::to_string_pretty(series).map_err(std::io::Error::other)?;
     std::fs::write(path, json)
 }
 

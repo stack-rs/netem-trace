@@ -50,10 +50,8 @@ fn main() {
     }
 
     // Export to files
-    write_bw_series_json(&series, "static_bw.json")
-        .expect("Failed to write JSON");
-    write_bw_series_csv(&series, "static_bw.csv")
-        .expect("Failed to write CSV");
+    write_bw_series_json(&series, "static_bw.json").expect("Failed to write JSON");
+    write_bw_series_csv(&series, "static_bw.csv").expect("Failed to write CSV");
     println!("   Exported to static_bw.json and static_bw.csv\n");
 
     // Example 2: Sawtooth Bandwidth Trace with Time Cutting
@@ -84,10 +82,8 @@ fn main() {
         );
     }
 
-    write_bw_series_json(&series, "sawtooth_bw.json")
-        .expect("Failed to write JSON");
-    write_bw_series_csv(&series, "sawtooth_bw.csv")
-        .expect("Failed to write CSV");
+    write_bw_series_json(&series, "sawtooth_bw.json").expect("Failed to write JSON");
+    write_bw_series_csv(&series, "sawtooth_bw.csv").expect("Failed to write CSV");
     println!("   Exported to sawtooth_bw.json and sawtooth_bw.csv\n");
 
     // Example 3: Normalized (Random) Bandwidth Trace
@@ -117,10 +113,8 @@ fn main() {
         );
     }
 
-    write_bw_series_json(&series, "normal_bw.json")
-        .expect("Failed to write JSON");
-    write_bw_series_csv(&series, "normal_bw.csv")
-        .expect("Failed to write CSV");
+    write_bw_series_json(&series, "normal_bw.json").expect("Failed to write JSON");
+    write_bw_series_csv(&series, "normal_bw.csv").expect("Failed to write CSV");
     println!("   Exported to normal_bw.json and normal_bw.csv\n");
 
     // Example 4: Repeated Pattern
@@ -159,10 +153,8 @@ fn main() {
         );
     }
 
-    write_bw_series_json(&series, "repeated_bw.json")
-        .expect("Failed to write JSON");
-    write_bw_series_csv(&series, "repeated_bw.csv")
-        .expect("Failed to write CSV");
+    write_bw_series_json(&series, "repeated_bw.json").expect("Failed to write JSON");
+    write_bw_series_csv(&series, "repeated_bw.csv").expect("Failed to write CSV");
     println!("   Exported to repeated_bw.json and repeated_bw.csv\n");
 
     // Example 5: Delay Trace
@@ -188,10 +180,8 @@ fn main() {
         );
     }
 
-    write_delay_series_json(&series, "delay.json")
-        .expect("Failed to write JSON");
-    write_delay_series_csv(&series, "delay.csv")
-        .expect("Failed to write CSV");
+    write_delay_series_json(&series, "delay.json").expect("Failed to write JSON");
+    write_delay_series_csv(&series, "delay.csv").expect("Failed to write CSV");
     println!("   Exported to delay.json and delay.csv\n");
 
     // Example 6: Per-Packet Delay Trace
