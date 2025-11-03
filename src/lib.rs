@@ -94,6 +94,10 @@
 //!
 //! - `mahimahi`: Enable this feature if you want to load or output traces in [mahimahi](https://github.com/ravinet/mahimahi) format.
 //!
+//! ### Trace Extension Features
+//!
+//! - `trace-ext`: Enable this feature to use the series expansion and export functionality for plotting and visualization. See [`series`] module for details.
+//!
 //! ### Other Features
 //!
 //! - `serde`: Enable this features if you want some structs to be serializable/deserializable. Often used with model features.
@@ -112,6 +116,9 @@ pub use mahimahi::{load_mahimahi_trace, Mahimahi, MahimahiExt};
     feature = "model",
 ))]
 pub mod model;
+
+#[cfg(feature = "trace-ext")]
+pub mod series;
 
 pub use bandwidth::Bandwidth;
 pub use std::time::Duration;
