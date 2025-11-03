@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [v0.4.4](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.4) - 2025-11-03 06:15:13+00:00
+
+This release introduces a new feature called 'trace-ext', which provides developer interfaces to convert trait-defined iterable trace models into series for further analysis or visualization in other programming languages.
+
+**Full Changelog**: https://github.com/stack-rs/netem-trace/compare/v0.4.3...v0.4.4
+
+### Feature
+
+- trace:
+  - support extension to convert to series ([947d5e9](https://github.com/stack-rs/netem-trace/commit/947d5e916b1e71d8f44c36916bed2a9400289343))
+
 ## [v0.4.3](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.3) - 2025-06-17 08:07:38+00:00
 
 ### What's Changed
