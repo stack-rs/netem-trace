@@ -74,7 +74,7 @@ pub trait DelayPerPacketTraceConfig: DynClone + Send + std::fmt::Debug {
 dyn_clone::clone_trait_object!(DelayPerPacketTraceConfig);
 
 use rand::{rngs::StdRng, RngCore, SeedableRng};
-use rand_distr::{Distribution, LogNormal, Normal};
+use rand_distr::{Distribution, LogNormal, Normal, Uniform};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -208,6 +208,61 @@ pub struct RepeatedDelayPerPacketPattern {
 pub struct RepeatedDelayPerPacketPatternConfig {
     pub pattern: Vec<Box<dyn DelayPerPacketTraceConfig>>,
     pub count: usize,
+}
+
+/// The model of a per-packet delay trace subjects to a uniform distribution.
+///
+/// The delay will subject to a uniform distribution in [lower_bound, upper_bound]
+///
+/// If the `count` is 0, the delay will be repeated forever, else it will be repeated `count` times.
+/// ## Examples
+///
+/// Default values for lower_bound and upper_bound are 0ms and 10ms, respectively.
+///
+/// ```
+/// # use netem_trace::model::UniformDelayPerPacketConfig;
+/// # use netem_trace::{Delay, DelayPerPacketTrace};
+/// let mut uniform_delay = UniformDelayPerPacketConfig::new()
+///     .upper_bound(Delay::from_micros(12100))
+///     .lower_bound(Delay::from_micros(11900))
+///     .count(2)
+///     .seed(42)
+///     .build();
+/// assert_eq!(uniform_delay.next_delay(), Some(Delay::from_nanos(12005311)));
+/// assert_eq!(uniform_delay.next_delay(), Some(Delay::from_nanos(12008545)));
+/// assert_eq!(uniform_delay.next_delay(), None);
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct UniformDelayPerPacket<Rng = StdRng>
+where
+    Rng: RngCore,
+{
+    pub upper_bound: Delay,
+    pub lower_bound: Delay,
+    pub seed: u64,
+    pub count: usize,
+    current_count: usize,
+    rng: Rng,
+    uniform: Uniform<f64>,
+}
+
+/// The configuration struct for [`UniformDelayPerPacket`].
+///
+/// See [`UniformDelayPerPacket`] for more details.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
+pub struct UniformDelayPerPacketConfig {
+    pub upper_bound: Option<Delay>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "humantime_serde")
+    )]
+    pub lower_bound: Option<Delay>,
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub count: usize,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub seed: Option<u64>,
 }
 
 /// The model of a per-packet delay trace subjects to a normal distribution.
@@ -435,6 +490,18 @@ impl DelayPerPacketTrace for RepeatedDelayPerPacketPattern {
     }
 }
 
+impl<Rng: RngCore + Send> DelayPerPacketTrace for UniformDelayPerPacket<Rng> {
+    fn next_delay(&mut self) -> Option<Delay> {
+        if self.count != 0 && self.count == self.current_count {
+            None
+        } else {
+            self.current_count += 1;
+            let delay = self.uniform.sample(&mut self.rng).max(0.0);
+            Some(Delay::from_secs_f64(delay))
+        }
+    }
+}
+
 impl<Rng: RngCore + Send> DelayPerPacketTrace for NormalizedDelayPerPacket<Rng> {
     fn next_delay(&mut self) -> Option<Delay> {
         if self.count != 0 && self.count == self.current_count {
@@ -521,6 +588,124 @@ impl RepeatedDelayPerPacketPatternConfig {
             current_model: None,
             current_cycle: 0,
             current_pattern: 0,
+        }
+    }
+}
+
+impl UniformDelayPerPacketConfig {
+    /// Creates an uninitialized config
+    pub fn new() -> Self {
+        Self {
+            upper_bound: None,
+            lower_bound: None,
+            count: 0,
+            seed: None,
+        }
+    }
+
+    /// Sets the upper bound
+    ///
+    /// If the upper bound is not set, the upper bound will be the one of [`Delay`].
+    pub fn upper_bound(mut self, upper_bound: Delay) -> Self {
+        self.upper_bound = Some(upper_bound);
+        self
+    }
+
+    /// Sets the lower bound
+    ///
+    /// If the lower bound is not set, 0ms will be used.
+    pub fn lower_bound(mut self, lower_bound: Delay) -> Self {
+        self.lower_bound = Some(lower_bound);
+        self
+    }
+
+    /// Sets the number of packets to repeat
+    ///
+    /// If the count is not set, it will be set to 0 (ie, infinite repeat).
+    pub fn count(mut self, count: usize) -> Self {
+        self.count = count;
+        self
+    }
+
+    /// Set the seed for a random generator
+    ///
+    /// If the seed is not set, `42` will be used.
+    pub fn seed(mut self, seed: u64) -> Self {
+        self.seed = Some(seed);
+        self
+    }
+
+    /// Allows to use a randomly generated seed
+    ///
+    /// This is equivalent to: `self.seed(rand::random())`
+    pub fn random_seed(mut self) -> Self {
+        self.seed = Some(rand::random());
+        self
+    }
+
+    /// Creates a new [`UniformDelayPerPacket`] corresponding to this config.
+    ///
+    /// The created model will use [`StdRng`] as source of randomness (the call is equivalent to `self.build_with_rng::<StdRng>()`).
+    /// It should be sufficient for most cases, but [`StdRng`] is not a portable random number generator,
+    /// so one may want to use a portable random number generator like [`ChaCha`](https://crates.io/crates/rand_chacha),
+    /// to this end one can use [`build_with_rng`](Self::build_with_rng).
+    pub fn build(self) -> UniformDelayPerPacket {
+        self.build_with_rng()
+    }
+
+    /// Creates a new [`UniformDelayPerPacket`] corresponding to this config.
+    ///
+    /// Unlike [`build`](Self::build), this method let you choose the random generator.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use netem_trace::model::UniformDelayPerPacketConfig;
+    /// # use netem_trace::{Delay, DelayPerPacketTrace};
+    /// # use rand::rngs::StdRng;
+    /// # use rand_chacha::ChaCha20Rng;
+    ///
+    /// let uniform_delay = UniformDelayPerPacketConfig::new()
+    ///     .upper_bound(Delay::from_micros(12100))
+    ///     .lower_bound(Delay::from_micros(11900))
+    ///     .count(3)
+    ///     .seed(42);
+    ///
+    /// let mut default_build = uniform_delay.clone().build();
+    /// let mut std_build = uniform_delay.clone().build_with_rng::<StdRng>();
+    /// // ChaCha is deterministic and portable, unlike StdRng
+    /// let mut chacha_build = uniform_delay.clone().build_with_rng::<ChaCha20Rng>();
+    ///
+    /// for cha in [12002810, 11982040, 11919563] {
+    ///     let default = default_build.next_delay();
+    ///     let std = std_build.next_delay();
+    ///     let chacha = chacha_build.next_delay();
+    ///
+    ///     assert!(default.is_some());
+    ///     assert_eq!(default, std);
+    ///     assert_ne!(default, chacha);
+    ///     assert_eq!(chacha, Some(Delay::from_nanos(cha)));
+    /// }
+    ///
+    /// assert_eq!(default_build.next_delay(), None);
+    /// assert_eq!(std_build.next_delay(), None);
+    /// assert_eq!(chacha_build.next_delay(), None);
+    /// ```
+    pub fn build_with_rng<Rng: RngCore + SeedableRng>(self) -> UniformDelayPerPacket<Rng> {
+        let upper_bound = self.upper_bound.unwrap_or(Delay::from_millis(10));
+        let lower_bound = self.lower_bound.unwrap_or(Delay::ZERO);
+        let count = self.count;
+        let seed = self.seed.unwrap_or(DEFAULT_RNG_SEED);
+        let rng = Rng::seed_from_u64(seed);
+        let uniform: Uniform<f64> =
+            Uniform::new(lower_bound.as_secs_f64(), upper_bound.as_secs_f64()).unwrap();
+        UniformDelayPerPacket {
+            upper_bound,
+            lower_bound,
+            count,
+            current_count: 0,
+            seed,
+            rng,
+            uniform,
         }
     }
 }
@@ -898,6 +1083,7 @@ macro_rules! impl_delay_per_packet_trace_config {
 }
 
 impl_delay_per_packet_trace_config!(StaticDelayPerPacketConfig);
+impl_delay_per_packet_trace_config!(UniformDelayPerPacketConfig);
 impl_delay_per_packet_trace_config!(NormalizedDelayPerPacketConfig);
 impl_delay_per_packet_trace_config!(LogNormalizedDelayPerPacketConfig);
 impl_delay_per_packet_trace_config!(RepeatedDelayPerPacketPatternConfig);
