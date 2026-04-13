@@ -215,6 +215,7 @@ pub struct RepeatedDelayPerPacketPatternConfig {
 /// The delay will subject to a uniform distribution in [lower_bound, upper_bound]
 ///
 /// If the `count` is 0, the delay will be repeated forever, else it will be repeated `count` times.
+///
 /// ## Examples
 ///
 /// Default values for lower_bound and upper_bound are 0ms and 10ms, respectively.
@@ -252,6 +253,11 @@ where
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(default))]
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct UniformDelayPerPacketConfig {
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "humantime_serde")
+    )]
     pub upper_bound: Option<Delay>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     #[cfg_attr(
@@ -605,7 +611,7 @@ impl UniformDelayPerPacketConfig {
 
     /// Sets the upper bound
     ///
-    /// If the upper bound is not set, the upper bound will be the one of [`Delay`].
+    /// If the upper bound is not set, the upper bound will be 10ms.
     pub fn upper_bound(mut self, upper_bound: Delay) -> Self {
         self.upper_bound = Some(upper_bound);
         self
