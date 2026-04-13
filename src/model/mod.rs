@@ -36,12 +36,12 @@ pub mod delay_per_packet;
 #[cfg(feature = "delay-per-packet-model")]
 pub use delay_per_packet::{
     DelayPerPacketTraceConfig, LogNormalizedDelayPerPacketConfig, NormalizedDelayPerPacketConfig,
-    RepeatedDelayPerPacketPatternConfig, StaticDelayPerPacketConfig,
+    RepeatedDelayPerPacketPatternConfig, StaticDelayPerPacketConfig, UniformDelayPerPacketConfig,
 };
 #[cfg(feature = "delay-per-packet-model")]
 pub use delay_per_packet::{
     LogNormalizedDelayPerPacket, NormalizedDelayPerPacket, RepeatedDelayPerPacketPattern,
-    StaticDelayPerPacket,
+    StaticDelayPerPacket, UniformDelayPerPacket,
 };
 
 #[cfg(feature = "loss-model")]
