@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [v0.4.5](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.5) - 2026-04-27 11:20:46+00:00
+
+## What's Changed
+* Add uniform distr for delay per packet by @Lethe10137 in https://github.com/stack-rs/netem-trace/pull/24
+
+
+**Full Changelog**: https://github.com/stack-rs/netem-trace/compare/v0.4.4...v0.4.5
+
+### Feature
+
+- model:
+  - add uniform distr for delay per packet (#24) ([66642f6](https://github.com/stack-rs/netem-trace/commit/66642f69e8b7d2f44fc7c477a074fcf780fff416)) ([#24](https://github.com/stack-rs/netem-trace/pull/24))
+
 ## [v0.4.4](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.4) - 2025-11-03 06:15:13+00:00
 
 This release introduces a new feature called 'trace-ext', which provides developer interfaces to convert trait-defined iterable trace models into series for further analysis or visualization in other programming languages.
@@ -72,11 +85,11 @@ This release introduces a new feature called 'trace-ext', which provides develop
 
 ### Documentation
 
-- model:
-  - update documentation on models ([862f485](https://github.com/stack-rs/netem-trace/commit/862f4852a9a7c703a09304e3ec67b5729fa79368))
-
 - readme:
   - update contributors ([71197e9](https://github.com/stack-rs/netem-trace/commit/71197e94a70696a3105328013933a5cc25d93b0f))
+
+- model:
+  - update documentation on models ([862f485](https://github.com/stack-rs/netem-trace/commit/862f4852a9a7c703a09304e3ec67b5729fa79368))
 
 ## [v0.3.6](https://github.com/stack-rs/netem-trace/releases/tag/v0.3.6) - 2024-12-08 16:04:14+00:00
 
