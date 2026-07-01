@@ -113,6 +113,7 @@ pub use mahimahi::{load_mahimahi_trace, Mahimahi, MahimahiExt};
     feature = "delay-model",
     feature = "loss-model",
     feature = "duplicate-model",
+    feature = "rwnd-model",
     feature = "model",
 ))]
 pub mod model;
@@ -125,6 +126,14 @@ pub use std::time::Duration;
 
 /// The delay describes how long a packet is delayed when going through.
 pub type Delay = std::time::Duration;
+
+/// A receive window value in bytes.
+///
+/// Used for `set_rcv_buf`, `app_read_bytes`, and `rwnd_remaining` fields in
+/// [`RwndDecision`]. All three are byte counts even though they describe
+/// different things (a configured buffer size, a consumed amount, an observed
+/// remaining window), so they share a single integer type.
+pub type Rwnd = u64;
 
 /// The loss_pattern describes how the packets are dropped when going through.
 ///
@@ -235,6 +244,58 @@ pub trait LossTrace: Send {
 /// the sequence, or **None** if the trace goes to end.
 pub trait DuplicateTrace: Send {
     fn next_duplicate(&mut self) -> Option<(DuplicatePattern, Duration)>;
+}
+
+/// The action a rwnd trace instructs the receiver to take at a single step.
+///
+/// Exactly one variant is present per step — the type-level encoding of the
+/// "exactly one of `app_read_bytes` / `rwnd_remaining`" rule.
+///
+/// - `AppRead` drives the receiver model by simulating the application reading
+///   `bytes` from the receive buffer; the resulting rwnd is computed from the
+///   buffer state.
+/// - `Remaining` skips the simulation and directly enforces an observed rwnd
+///   of `rwnd` bytes — useful for replaying captured traces where only the
+///   advertised window is known.
+#[derive(Debug, Clone, PartialEq)]
+pub enum RwndAction {
+    /// The simulated application reads this many bytes from the receive buffer at this step.
+    AppRead { bytes: u64 },
+    /// The remaining rwnd value observed immediately after the app consumes data at this step.
+    Remaining { rwnd: u64 },
+}
+
+/// A single receive-side decision emitted by a [`RwndTrace`].
+///
+/// Each step of a rwnd trace produces one `RwndDecision` paired with a
+/// [`Duration`] (see [`RwndTrace`]). The `set_rcv_buf` field is optional and
+/// independent of [`RwndAction`]: a step may resize the socket's receive
+/// buffer at the same time it advances the app-read or observed-remaining state.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RwndDecision {
+    /// If `Some`, reconfigure the socket's receive buffer to this size at this step.
+    pub set_rcv_buf: Option<u64>,
+    /// The app-read or observed-remaining action for this step.
+    pub action: RwndAction,
+}
+
+/// This is a trait that represents a trace of receive-window decisions over time.
+///
+/// The trace is a sequence of `(rwnd_decision, duration)` pairs. The decision
+/// describes how the socket's receive buffer, the application's read behavior,
+/// and/or the observed remaining window change at this step; the duration is
+/// how long this configuration lasts before the next step applies.
+///
+/// For example, if the sequence is
+/// `[(set_rcv_buf=64KB, app_read=1KB, 1s), (rwnd_remaining=32KB, 2s)]`,
+/// then the receive buffer is resized to 64KB and the app reads 1KB for 1s,
+/// then the observed rwnd becomes 32KB for 2s.
+///
+/// Each `next_rwnd` call returns **the next decision and its duration** in the
+/// sequence, or **None** when the trace is exhausted. Mirrors the shape of
+/// [`BwTrace`], [`DelayTrace`], and [`LossTrace`].
+pub trait RwndTrace: Send {
+    fn next_rwnd(&mut self) -> Option<(RwndDecision, Duration)>;
 }
 
 #[cfg(test)]
