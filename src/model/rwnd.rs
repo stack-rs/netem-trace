@@ -242,25 +242,36 @@ impl RwndTrace for StaticRwnd {
 
 impl RwndTrace for RepeatedRwndPattern {
     fn next_rwnd(&mut self) -> Option<(RwndDecision, Duration)> {
-        if self.pattern.is_empty() || (self.count != 0 && self.current_cycle >= self.count) {
-            None
-        } else {
+        let pattern_len = self.pattern.len();
+        // Allow at most pattern_len + 1 consecutive inner-None results before
+        // giving up. The +1 covers a possibly-exhausted current_model at entry;
+        // after that, each remaining slot is a fresh clone whose behaviour is
+        // deterministic. If all pattern_len fresh clones return None, the
+        // pattern will never produce a value regardless of count.
+        let mut budget = pattern_len + 1;
+        loop {
+            if pattern_len == 0 || (self.count != 0 && self.current_cycle >= self.count) {
+                return None;
+            }
+            if budget == 0 {
+                return None;
+            }
             if self.current_model.is_none() {
                 self.current_model = Some(self.pattern[self.current_pattern].clone().into_model());
             }
             match self.current_model.as_mut().unwrap().next_rwnd() {
-                Some(rwnd) => Some(rwnd),
+                Some(item) => return Some(item),
                 None => {
                     self.current_model = None;
+                    budget -= 1;
                     self.current_pattern += 1;
-                    if self.current_pattern >= self.pattern.len() {
+                    if self.current_pattern >= pattern_len {
                         self.current_pattern = 0;
                         self.current_cycle += 1;
                         if self.count != 0 && self.current_cycle >= self.count {
                             return None;
                         }
                     }
-                    self.next_rwnd()
                 }
             }
         }
@@ -498,5 +509,29 @@ mod test {
         let (decision, _) = model.next_rwnd().unwrap();
         assert_eq!(decision.set_rcv_buf, Some(65536));
         assert_eq!(decision.action, None);
+    }
+
+    #[test]
+    fn test_repeated_rwnd_pattern_all_zero_duration_terminates() {
+        // All inner models have duration == 0 and return None immediately.
+        // With count == 0 (infinite repeat) the old recursive implementation
+        // would spin forever; the loop-based one must return None promptly.
+        let pat = vec![
+            Box::new(
+                StaticRwndConfig::new()
+                    .app_read(1024)
+                    .duration(Duration::ZERO),
+            ) as Box<dyn RwndTraceConfig>,
+            Box::new(
+                StaticRwndConfig::new()
+                    .remaining(32768)
+                    .duration(Duration::ZERO),
+            ) as Box<dyn RwndTraceConfig>,
+        ];
+        let mut model = RepeatedRwndPatternConfig::new()
+            .pattern(pat)
+            .count(0) // infinite
+            .build();
+        assert_eq!(model.next_rwnd(), None);
     }
 }
