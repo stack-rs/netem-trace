@@ -28,7 +28,7 @@ rand_distr = { version = "0.5.1", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1.0", optional = true }
 statrs = { version = "0.18.0", optional = true }
-typetag = { version = "0.2.5", optional = true }
+typetag = { version = "0.2.22", optional = true }
 
 [dev-dependencies]
 figment = { version = "0.10.19", features = ["json"] }
