@@ -67,7 +67,7 @@ pub mod rwnd;
 #[cfg(feature = "rwnd-model")]
 pub use rwnd::{RepeatedRwndPattern, StaticRwnd};
 #[cfg(feature = "rwnd-model")]
-pub use rwnd::{RepeatedRwndPatternConfig, RwndActionConfig, RwndTraceConfig, StaticRwndConfig};
+pub use rwnd::{RepeatedRwndPatternConfig, RwndTraceConfig, StaticRwndConfig};
 
 #[cfg(feature = "truncated-normal")]
 pub mod solve_truncate;

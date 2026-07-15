@@ -72,21 +72,6 @@ dyn_clone::clone_trait_object!(RwndTraceConfig);
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-/// The config-layer representation of the action at a rwnd step.
-///
-/// This enum is the deserialized form of the mutually-exclusive
-/// `app_read_bytes` / `rwnd_remaining` pair. [`StaticRwndConfig`]'s custom
-/// serde impls flatten the active variant into the top level of the JSON
-/// object, so this enum's own externally-tagged shape is rarely seen by users
-/// — but it's serialized/deserialized on its own when used outside the
-/// custom container impl.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, PartialEq)]
-pub enum RwndActionConfig {
-    AppRead { app_read_bytes: u64 },
-    Remaining { rwnd_remaining: u64 },
-}
-
 /// The model of a static rwnd trace: a single decision valid for one duration.
 ///
 /// ## Examples
@@ -113,8 +98,7 @@ pub struct StaticRwnd {
 
 /// The configuration struct for [`StaticRwnd`].
 ///
-/// The serialized JSON form is **flat** — the active variant of [`RwndActionConfig`]
-/// is hoisted to the top level, so a step looks like
+/// The serialized JSON form is **flat**: a step looks like
 /// `{"duration":"1s","set_rcv_buf":65536,"app_read_bytes":1024}` (or
 /// `{"duration":"1s","rwnd_remaining":32768}`), never with an `action` wrapper.
 ///
@@ -126,7 +110,7 @@ pub struct StaticRwnd {
 pub struct StaticRwndConfig {
     pub duration: Option<Duration>,
     pub set_rcv_buf: Option<u64>,
-    pub action: Option<RwndActionConfig>,
+    pub action: Option<RwndAction>,
 }
 
 #[cfg(feature = "serde")]
@@ -148,12 +132,8 @@ impl<'de> Deserialize<'de> for StaticRwndConfig {
 
         let h = Helper::deserialize(deserializer)?;
         let action = match (h.app_read_bytes, h.rwnd_remaining) {
-            (Some(bytes), None) => Some(RwndActionConfig::AppRead {
-                app_read_bytes: bytes,
-            }),
-            (None, Some(rwnd)) => Some(RwndActionConfig::Remaining {
-                rwnd_remaining: rwnd,
-            }),
+            (Some(bytes), None) => Some(RwndAction::AppRead { bytes }),
+            (None, Some(rwnd)) => Some(RwndAction::Remaining { rwnd }),
             (Some(_), Some(_)) => {
                 return Err(serde::de::Error::custom(
                     "rwnd step cannot set both `app_read_bytes` and `rwnd_remaining`",
@@ -186,8 +166,8 @@ impl Serialize for StaticRwndConfig {
         }
 
         let (app_read_bytes, rwnd_remaining) = match &self.action {
-            Some(RwndActionConfig::AppRead { app_read_bytes }) => (Some(*app_read_bytes), None),
-            Some(RwndActionConfig::Remaining { rwnd_remaining }) => (None, Some(*rwnd_remaining)),
+            Some(RwndAction::AppRead { bytes }) => (Some(*bytes), None),
+            Some(RwndAction::Remaining { rwnd }) => (None, Some(*rwnd)),
             None => {
                 return Err(serde::ser::Error::custom(
                     "rwnd step must set exactly one of `app_read_bytes` or `rwnd_remaining`",
@@ -307,32 +287,20 @@ impl StaticRwndConfig {
     }
 
     pub fn app_read(mut self, bytes: u64) -> Self {
-        self.action = Some(RwndActionConfig::AppRead {
-            app_read_bytes: bytes,
-        });
+        self.action = Some(RwndAction::AppRead { bytes });
         self
     }
 
     pub fn remaining(mut self, rwnd: u64) -> Self {
-        self.action = Some(RwndActionConfig::Remaining {
-            rwnd_remaining: rwnd,
-        });
+        self.action = Some(RwndAction::Remaining { rwnd });
         self
     }
 
     pub fn build(self) -> StaticRwnd {
-        let action = self.action.map(|cfg| match cfg {
-            RwndActionConfig::AppRead { app_read_bytes } => RwndAction::AppRead {
-                bytes: app_read_bytes,
-            },
-            RwndActionConfig::Remaining { rwnd_remaining } => RwndAction::Remaining {
-                rwnd: rwnd_remaining,
-            },
-        });
         StaticRwnd {
             decision: RwndDecision {
                 set_rcv_buf: self.set_rcv_buf,
-                action,
+                action: self.action,
             },
             duration: Some(self.duration.unwrap_or_else(|| Duration::from_secs(1))),
         }
