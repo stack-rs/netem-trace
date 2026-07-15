@@ -168,11 +168,7 @@ impl Serialize for StaticRwndConfig {
         let (app_read_bytes, rwnd_remaining) = match &self.action {
             Some(RwndAction::AppRead { bytes }) => (Some(*bytes), None),
             Some(RwndAction::Remaining { rwnd }) => (None, Some(*rwnd)),
-            None => {
-                return Err(serde::ser::Error::custom(
-                    "rwnd step must set exactly one of `app_read_bytes` or `rwnd_remaining`",
-                ));
-            }
+            None => (None, None),
         };
         Out {
             duration: self.duration,
@@ -492,6 +488,31 @@ mod test {
             .set_rcv_buf(131072)
             .duration(Duration::from_secs(1))
             .build();
+        let (decision, duration) = model.next_rwnd().unwrap();
+        assert_eq!(decision.set_rcv_buf, Some(131072));
+        assert_eq!(decision.action, None);
+        assert_eq!(duration, Duration::from_secs(1));
+        assert_eq!(model.next_rwnd(), None);
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_serde_roundtrip_set_rcv_buf_only() {
+        let cfg = Box::new(
+            StaticRwndConfig::new()
+                .set_rcv_buf(131072)
+                .duration(Duration::from_secs(1)),
+        ) as Box<dyn RwndTraceConfig>;
+        let ser_str = serde_json::to_string(&cfg).unwrap();
+        #[cfg(feature = "human")]
+        let expected = "{\"StaticRwndConfig\":{\"duration\":\"1s\",\"set_rcv_buf\":131072}}";
+        #[cfg(not(feature = "human"))]
+        let expected =
+            "{\"StaticRwndConfig\":{\"duration\":{\"secs\":1,\"nanos\":0},\"set_rcv_buf\":131072}}";
+        assert_eq!(ser_str, expected);
+
+        let des: Box<dyn RwndTraceConfig> = serde_json::from_str(&ser_str).unwrap();
+        let mut model = des.into_model();
         let (decision, duration) = model.next_rwnd().unwrap();
         assert_eq!(decision.set_rcv_buf, Some(131072));
         assert_eq!(decision.action, None);
