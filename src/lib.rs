@@ -127,14 +127,6 @@ pub use std::time::Duration;
 /// The delay describes how long a packet is delayed when going through.
 pub type Delay = std::time::Duration;
 
-/// A receive window value in bytes.
-///
-/// Used for `set_rcv_buf`, `app_read_bytes`, and `rwnd_remaining` fields in
-/// [`RwndDecision`]. All three are byte counts even though they describe
-/// different things (a configured buffer size, a consumed amount, an observed
-/// remaining window), so they share a single integer type.
-pub type Rwnd = u64;
-
 /// The loss_pattern describes how the packets are dropped when going through.
 ///
 /// The loss_pattern is a sequence of conditional probabilities describing how packets are dropped.

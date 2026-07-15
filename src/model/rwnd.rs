@@ -54,7 +54,7 @@
 //! never both, never neither. A step that violates this rule fails to deserialize
 //! with a clear error message; a programmatically-built config that violates it
 //! panics in [`StaticRwndConfig::build`].
-use crate::{Duration, Rwnd, RwndAction, RwndDecision, RwndTrace};
+use crate::{Duration, RwndAction, RwndDecision, RwndTrace};
 use dyn_clone::DynClone;
 
 /// This trait is used to convert a rwnd trace configuration into a rwnd trace model.
@@ -84,8 +84,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq)]
 pub enum RwndActionConfig {
-    AppRead { app_read_bytes: Rwnd },
-    Remaining { rwnd_remaining: Rwnd },
+    AppRead { app_read_bytes: u64 },
+    Remaining { rwnd_remaining: u64 },
 }
 
 /// The model of a static rwnd trace: a single decision valid for one duration.
@@ -124,7 +124,7 @@ pub struct StaticRwnd {
 #[derive(Debug, Clone, Default)]
 pub struct StaticRwndConfig {
     pub duration: Option<Duration>,
-    pub set_rcv_buf: Option<Rwnd>,
+    pub set_rcv_buf: Option<u64>,
     // None only when constructed via `new()`/`Default` and not yet configured;
     // `build()` panics on None as a defense for programmatic construction.
     pub action: Option<RwndActionConfig>,
@@ -140,11 +140,11 @@ impl<'de> Deserialize<'de> for StaticRwndConfig {
             #[serde(default)]
             duration: Option<Duration>,
             #[serde(default)]
-            set_rcv_buf: Option<Rwnd>,
+            set_rcv_buf: Option<u64>,
             #[serde(default)]
-            app_read_bytes: Option<Rwnd>,
+            app_read_bytes: Option<u64>,
             #[serde(default)]
-            rwnd_remaining: Option<Rwnd>,
+            rwnd_remaining: Option<u64>,
         }
 
         let h = Helper::deserialize(deserializer)?;
@@ -183,11 +183,11 @@ impl Serialize for StaticRwndConfig {
             #[cfg_attr(feature = "human", serde(with = "humantime_serde"))]
             duration: Option<Duration>,
             #[serde(skip_serializing_if = "Option::is_none")]
-            set_rcv_buf: Option<Rwnd>,
+            set_rcv_buf: Option<u64>,
             #[serde(skip_serializing_if = "Option::is_none")]
-            app_read_bytes: Option<Rwnd>,
+            app_read_bytes: Option<u64>,
             #[serde(skip_serializing_if = "Option::is_none")]
-            rwnd_remaining: Option<Rwnd>,
+            rwnd_remaining: Option<u64>,
         }
 
         let (app_read_bytes, rwnd_remaining) = match &self.action {
@@ -302,19 +302,19 @@ impl StaticRwndConfig {
         self
     }
 
-    pub fn set_rcv_buf(mut self, set_rcv_buf: Rwnd) -> Self {
+    pub fn set_rcv_buf(mut self, set_rcv_buf: u64) -> Self {
         self.set_rcv_buf = Some(set_rcv_buf);
         self
     }
 
-    pub fn app_read(mut self, bytes: Rwnd) -> Self {
+    pub fn app_read(mut self, bytes: u64) -> Self {
         self.action = Some(RwndActionConfig::AppRead {
             app_read_bytes: bytes,
         });
         self
     }
 
-    pub fn remaining(mut self, rwnd: Rwnd) -> Self {
+    pub fn remaining(mut self, rwnd: u64) -> Self {
         self.action = Some(RwndActionConfig::Remaining {
             rwnd_remaining: rwnd,
         });
