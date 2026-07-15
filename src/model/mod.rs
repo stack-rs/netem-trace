@@ -1,15 +1,16 @@
-//! This module contains pre-defined models for BwTrace, DelayTrace, LossTrace and DuplicateTrace.
+//! This module contains pre-defined models for BwTrace, DelayTrace, LossTrace, DuplicateTrace and RwndTrace.
 //!
 //! A model has two parts: a configuration struct and a model struct.
 //! The configuration struct is used to configure the model and
 //! used for serialization/deserialization if `serde` feature is enabled.
-//! The model struct which implements trait `BwTrace`, `DelayTrace`, `LossTrace` or `DuplicateTrace`
+//! The model struct which implements trait `BwTrace`, `DelayTrace`, `LossTrace`, `DuplicateTrace` or `RwndTrace`
 //! is used to generate the trace and maintain inner states.
 //!
 //! Enable `bw-model` feature to use the BwTrace models.
 //! Enable `delay-model` feature to use the DelayTrace models.
 //! Enable `loss-model` feature to use the LossTrace models.
 //! Enable `duplicate-model` feature to use the DuplicateTrace models.
+//! Enable `rwnd-model` feature to use the RwndTrace models.
 
 #[cfg(feature = "bw-model")]
 pub mod bw;
@@ -59,6 +60,14 @@ pub mod duplicate;
 pub use duplicate::{DuplicateTraceConfig, RepeatedDuplicatePatternConfig, StaticDuplicateConfig};
 #[cfg(feature = "duplicate-model")]
 pub use duplicate::{RepeatedDuplicatePattern, StaticDuplicate};
+
+#[cfg(feature = "rwnd-model")]
+pub mod rwnd;
+
+#[cfg(feature = "rwnd-model")]
+pub use rwnd::{RepeatedRwndPattern, StaticRwnd};
+#[cfg(feature = "rwnd-model")]
+pub use rwnd::{RepeatedRwndPatternConfig, RwndTraceConfig, StaticRwndConfig};
 
 #[cfg(feature = "truncated-normal")]
 pub mod solve_truncate;
