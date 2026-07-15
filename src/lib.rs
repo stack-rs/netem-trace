@@ -240,8 +240,9 @@ pub trait DuplicateTrace: Send {
 
 /// The action a rwnd trace instructs the receiver to take at a single step.
 ///
-/// Exactly one variant is present per step — the type-level encoding of the
-/// "exactly one of `app_read_bytes` / `rwnd_remaining`" rule.
+/// At most one action is present per step; a step that only reconfigures the
+/// receive buffer (`set_rcv_buf`) without any read or observed-remaining update
+/// leaves [`RwndDecision::action`] as `None`.
 ///
 /// - `AppRead` drives the receiver model by simulating the application reading
 ///   `bytes` from the receive buffer; the resulting rwnd is computed from the
@@ -260,15 +261,15 @@ pub enum RwndAction {
 /// A single receive-side decision emitted by a [`RwndTrace`].
 ///
 /// Each step of a rwnd trace produces one `RwndDecision` paired with a
-/// [`Duration`] (see [`RwndTrace`]). The `set_rcv_buf` field is optional and
-/// independent of [`RwndAction`]: a step may resize the socket's receive
-/// buffer at the same time it advances the app-read or observed-remaining state.
+/// [`Duration`] (see [`RwndTrace`]). Both fields are optional and independent:
+/// a step may resize the socket buffer, advance the receive model, both, or
+/// neither (though a step that sets neither is effectively a no-op).
 #[derive(Debug, Clone, PartialEq)]
 pub struct RwndDecision {
     /// If `Some`, reconfigure the socket's receive buffer to this size at this step.
     pub set_rcv_buf: Option<u64>,
-    /// The app-read or observed-remaining action for this step.
-    pub action: RwndAction,
+    /// If `Some`, the app-read or observed-remaining action for this step.
+    pub action: Option<RwndAction>,
 }
 
 /// This is a trait that represents a trace of receive-window decisions over time.

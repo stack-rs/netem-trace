@@ -21,7 +21,7 @@
 //!     .build();
 //! let (decision, duration) = static_rwnd.next_rwnd().unwrap();
 //! assert_eq!(decision.set_rcv_buf, Some(65536));
-//! assert_eq!(decision.action, RwndAction::AppRead { bytes: 1024 });
+//! assert_eq!(decision.action, Some(RwndAction::AppRead { bytes: 1024 }));
 //! assert_eq!(duration, Duration::from_secs(1));
 //! assert_eq!(static_rwnd.next_rwnd(), None);
 //! ```
@@ -40,20 +40,19 @@
 //! let des: Box<dyn RwndTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 //! let mut model = des.into_model();
 //! let (decision, _) = model.next_rwnd().unwrap();
-//! assert_eq!(decision.action, RwndAction::AppRead { bytes: 1024 });
+//! assert_eq!(decision.action, Some(RwndAction::AppRead { bytes: 1024 }));
 //! let (decision, _) = model.next_rwnd().unwrap();
-//! assert_eq!(decision.action, RwndAction::Remaining { rwnd: 32768 });
+//! assert_eq!(decision.action, Some(RwndAction::Remaining { rwnd: 32768 }));
 //! let (decision, _) = model.next_rwnd().unwrap();
-//! assert_eq!(decision.action, RwndAction::AppRead { bytes: 1024 });
+//! assert_eq!(decision.action, Some(RwndAction::AppRead { bytes: 1024 }));
 //! let (decision, _) = model.next_rwnd().unwrap();
-//! assert_eq!(decision.action, RwndAction::Remaining { rwnd: 32768 });
+//! assert_eq!(decision.action, Some(RwndAction::Remaining { rwnd: 32768 }));
 //! assert_eq!(model.next_rwnd(), None);
 //! ```
 //!
-//! Each step must set **exactly one** of `app_read_bytes` or `rwnd_remaining` —
-//! never both, never neither. A step that violates this rule fails to deserialize
-//! with a clear error message; a programmatically-built config that violates it
-//! panics in [`StaticRwndConfig::build`].
+//! At most one of `app_read_bytes` or `rwnd_remaining` may be set per step —
+//! never both. A step with neither produces [`RwndDecision::action`] as `None`,
+//! which is valid for steps that only reconfigure the receive buffer.
 use crate::{Duration, RwndAction, RwndDecision, RwndTrace};
 use dyn_clone::DynClone;
 
@@ -102,7 +101,7 @@ pub enum RwndActionConfig {
 ///     .build();
 /// let (decision, duration) = static_rwnd.next_rwnd().unwrap();
 /// assert_eq!(decision.set_rcv_buf, Some(65536));
-/// assert_eq!(decision.action, RwndAction::AppRead { bytes: 1024 });
+/// assert_eq!(decision.action, Some(RwndAction::AppRead { bytes: 1024 }));
 /// assert_eq!(duration, Duration::from_secs(1));
 /// assert_eq!(static_rwnd.next_rwnd(), None);
 /// ```
@@ -119,14 +118,14 @@ pub struct StaticRwnd {
 /// `{"duration":"1s","set_rcv_buf":65536,"app_read_bytes":1024}` (or
 /// `{"duration":"1s","rwnd_remaining":32768}`), never with an `action` wrapper.
 ///
-/// Exactly one of `app_read_bytes` / `rwnd_remaining` must be set; the deserializer
-/// rejects both-set and neither-set inputs.
+/// At most one of `app_read_bytes` / `rwnd_remaining` may be set; the deserializer
+/// rejects inputs where both are present. A step with neither is valid and produces
+/// [`RwndDecision::action`] as `None` (useful for steps that only reconfigure the
+/// receive buffer).
 #[derive(Debug, Clone, Default)]
 pub struct StaticRwndConfig {
     pub duration: Option<Duration>,
     pub set_rcv_buf: Option<u64>,
-    // None only when constructed via `new()`/`Default` and not yet configured;
-    // `build()` panics on None as a defense for programmatic construction.
     pub action: Option<RwndActionConfig>,
 }
 
@@ -149,27 +148,23 @@ impl<'de> Deserialize<'de> for StaticRwndConfig {
 
         let h = Helper::deserialize(deserializer)?;
         let action = match (h.app_read_bytes, h.rwnd_remaining) {
-            (Some(bytes), None) => RwndActionConfig::AppRead {
+            (Some(bytes), None) => Some(RwndActionConfig::AppRead {
                 app_read_bytes: bytes,
-            },
-            (None, Some(rwnd)) => RwndActionConfig::Remaining {
+            }),
+            (None, Some(rwnd)) => Some(RwndActionConfig::Remaining {
                 rwnd_remaining: rwnd,
-            },
+            }),
             (Some(_), Some(_)) => {
                 return Err(serde::de::Error::custom(
                     "rwnd step cannot set both `app_read_bytes` and `rwnd_remaining`",
                 ));
             }
-            (None, None) => {
-                return Err(serde::de::Error::custom(
-                    "rwnd step must set exactly one of `app_read_bytes` or `rwnd_remaining`",
-                ));
-            }
+            (None, None) => None,
         };
         Ok(Self {
             duration: h.duration,
             set_rcv_buf: h.set_rcv_buf,
-            action: Some(action),
+            action,
         })
     }
 }
@@ -193,7 +188,11 @@ impl Serialize for StaticRwndConfig {
         let (app_read_bytes, rwnd_remaining) = match &self.action {
             Some(RwndActionConfig::AppRead { app_read_bytes }) => (Some(*app_read_bytes), None),
             Some(RwndActionConfig::Remaining { rwnd_remaining }) => (None, Some(*rwnd_remaining)),
-            None => (None, None),
+            None => {
+                return Err(serde::ser::Error::custom(
+                    "rwnd step must set exactly one of `app_read_bytes` or `rwnd_remaining`",
+                ));
+            }
         };
         Out {
             duration: self.duration,
@@ -227,7 +226,7 @@ impl Serialize for StaticRwndConfig {
 /// let des: Box<dyn RwndTraceConfig> = serde_json::from_str(config_file_content).unwrap();
 /// let mut model = des.into_model();
 /// let (decision, _) = model.next_rwnd().unwrap();
-/// assert_eq!(decision.action, RwndAction::AppRead { bytes: 1024 });
+/// assert_eq!(decision.action, Some(RwndAction::AppRead { bytes: 1024 }));
 /// ```
 pub struct RepeatedRwndPattern {
     pub pattern: Vec<Box<dyn RwndTraceConfig>>,
@@ -322,17 +321,14 @@ impl StaticRwndConfig {
     }
 
     pub fn build(self) -> StaticRwnd {
-        let action_cfg = self.action.expect(
-            "StaticRwndConfig::build called without setting one of `app_read_bytes` or `rwnd_remaining`",
-        );
-        let action = match action_cfg {
+        let action = self.action.map(|cfg| match cfg {
             RwndActionConfig::AppRead { app_read_bytes } => RwndAction::AppRead {
                 bytes: app_read_bytes,
             },
             RwndActionConfig::Remaining { rwnd_remaining } => RwndAction::Remaining {
                 rwnd: rwnd_remaining,
             },
-        };
+        });
         StaticRwnd {
             decision: RwndDecision {
                 set_rcv_buf: self.set_rcv_buf,
@@ -401,7 +397,7 @@ mod test {
             .build();
         let (decision, duration) = static_rwnd.next_rwnd().unwrap();
         assert_eq!(decision.set_rcv_buf, Some(65536));
-        assert_eq!(decision.action, RwndAction::AppRead { bytes: 1024 });
+        assert_eq!(decision.action, Some(RwndAction::AppRead { bytes: 1024 }));
         assert_eq!(duration, Duration::from_secs(1));
         assert_eq!(static_rwnd.next_rwnd(), None);
     }
@@ -414,7 +410,7 @@ mod test {
             .build();
         let (decision, duration) = static_rwnd.next_rwnd().unwrap();
         assert_eq!(decision.set_rcv_buf, None);
-        assert_eq!(decision.action, RwndAction::Remaining { rwnd: 32768 });
+        assert_eq!(decision.action, Some(RwndAction::Remaining { rwnd: 32768 }));
         assert_eq!(duration, Duration::from_secs(2));
         assert_eq!(static_rwnd.next_rwnd(), None);
     }
@@ -438,14 +434,14 @@ mod test {
             .count(2)
             .build();
         let next = model.next_rwnd().unwrap();
-        assert_eq!(next.0.action, RwndAction::AppRead { bytes: 1024 });
+        assert_eq!(next.0.action, Some(RwndAction::AppRead { bytes: 1024 }));
         assert_eq!(next.1, Duration::from_secs(1));
         let next = model.next_rwnd().unwrap();
-        assert_eq!(next.0.action, RwndAction::Remaining { rwnd: 32768 });
+        assert_eq!(next.0.action, Some(RwndAction::Remaining { rwnd: 32768 }));
         let next = model.next_rwnd().unwrap();
-        assert_eq!(next.0.action, RwndAction::AppRead { bytes: 1024 });
+        assert_eq!(next.0.action, Some(RwndAction::AppRead { bytes: 1024 }));
         let next = model.next_rwnd().unwrap();
-        assert_eq!(next.0.action, RwndAction::Remaining { rwnd: 32768 });
+        assert_eq!(next.0.action, Some(RwndAction::Remaining { rwnd: 32768 }));
         assert_eq!(model.next_rwnd(), None);
     }
 
@@ -469,7 +465,7 @@ mod test {
         let mut model = des.into_model();
         let (decision, duration) = model.next_rwnd().unwrap();
         assert_eq!(decision.set_rcv_buf, Some(65536));
-        assert_eq!(decision.action, RwndAction::AppRead { bytes: 1024 });
+        assert_eq!(decision.action, Some(RwndAction::AppRead { bytes: 1024 }));
         assert_eq!(duration, Duration::from_secs(1));
     }
 
@@ -491,7 +487,7 @@ mod test {
         let des: Box<dyn RwndTraceConfig> = serde_json::from_str(&ser_str).unwrap();
         let mut model = des.into_model();
         let (decision, _) = model.next_rwnd().unwrap();
-        assert_eq!(decision.action, RwndAction::Remaining { rwnd: 32768 });
+        assert_eq!(decision.action, Some(RwndAction::Remaining { rwnd: 32768 }));
     }
 
     #[test]
@@ -512,27 +508,27 @@ mod test {
     }
 
     #[test]
-    #[cfg(feature = "serde")]
-    fn test_serde_rejects_neither() {
-        // Omit duration to avoid the human/non-human format ambiguity; we're testing
-        // the action constraint, not duration parsing.
-        let json = "{\"StaticRwndConfig\":{\"set_rcv_buf\":65536}}";
-        let result: Result<Box<dyn RwndTraceConfig>, _> = serde_json::from_str(json);
-        let err = result
-            .err()
-            .expect("deserialization should have failed")
-            .to_string();
-        assert!(
-            err.contains("exactly one"),
-            "expected 'exactly one' in error, got: {err}"
-        );
+    fn test_static_rwnd_set_rcv_buf_only() {
+        let mut model = StaticRwndConfig::new()
+            .set_rcv_buf(131072)
+            .duration(Duration::from_secs(1))
+            .build();
+        let (decision, duration) = model.next_rwnd().unwrap();
+        assert_eq!(decision.set_rcv_buf, Some(131072));
+        assert_eq!(decision.action, None);
+        assert_eq!(duration, Duration::from_secs(1));
+        assert_eq!(model.next_rwnd(), None);
     }
 
     #[test]
-    #[should_panic(
-        expected = "StaticRwndConfig::build called without setting one of `app_read_bytes` or `rwnd_remaining`"
-    )]
-    fn test_build_panics_without_action() {
-        StaticRwndConfig::new().build();
+    #[cfg(feature = "serde")]
+    fn test_serde_action_none_when_neither_set() {
+        // A step with only set_rcv_buf and no action fields should deserialize to action: None.
+        let json = "{\"StaticRwndConfig\":{\"set_rcv_buf\":65536}}";
+        let des: Box<dyn RwndTraceConfig> = serde_json::from_str(json).unwrap();
+        let mut model = des.into_model();
+        let (decision, _) = model.next_rwnd().unwrap();
+        assert_eq!(decision.set_rcv_buf, Some(65536));
+        assert_eq!(decision.action, None);
     }
 }
