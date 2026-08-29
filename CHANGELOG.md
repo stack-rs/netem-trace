@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## [v0.4.7](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.7) - 2026-08-29 07:02:45+00:00
+
+## What's Changed
+
+* refactor(model): fold rwnd_remaining into set_rcv_buf by @zhang-hc22 in https://github.com/stack-rs/netem-trace/pull/28
+
+
+**Full Changelog**: https://github.com/stack-rs/netem-trace/compare/v0.4.6...v0.4.7
+
+### Refactor
+
+- model:
+  - fold rwnd_remaining into set_rcv_buf (#28) ([8347527](https://github.com/stack-rs/netem-trace/commit/834752797d1cb1bd05e5622220fe25466347ed6e)) ([#28](https://github.com/stack-rs/netem-trace/pull/28))
+
+## [v0.4.6](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.6) - 2026-07-15 10:46:48+00:00
+
+## What's Changed
+
+- Add a rwnd trace trait and models by @zhang-hc22 in [#26](https://github.com/stack-rs/netem-trace/pull/26)
+
+## New Contributors
+
+- @zhang-hc22 made his first contribution in [#26](https://github.com/stack-rs/netem-trace/pull/26)
+
+**Full Changelog**: https://github.com/stack-rs/netem-trace/compare/v0.4.5...v0.4.6
+
+### Feature
+
+- model:
+  - add a rwnd trace trait and models (#26) ([746da0e](https://github.com/stack-rs/netem-trace/commit/746da0e4c272b3bfaf7aac4cc566c0996e2a0690)) ([#26](https://github.com/stack-rs/netem-trace/pull/26))
+
 ## [v0.4.5](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.5) - 2026-04-27 11:20:46+00:00
 
 ## What's Changed
