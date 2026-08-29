@@ -243,12 +243,12 @@ pub trait DuplicateTrace: Send {
 /// The two fields are independent, and between them they say what the receiver
 /// does for this step's duration.
 ///
-/// `set_rcv_buf` sizes the receive buffer *and* states that the application is
-/// keeping up with it: the buffer holds that many bytes, the advertised window
-/// is held at that value, and the application drains continuously so the
-/// window's right edge slides forward with the data received. That models a
-/// receiver whose buffer stopped growing -- in-flight ends up limited by the
-/// window, and the window itself stays put.
+/// `set_rcv_buf` sizes the receive buffer. On its own it also states that the
+/// application is keeping up with it: the buffer holds that many bytes, the
+/// advertised window is held at that value, and the application drains
+/// continuously so the window's right edge slides forward with the data
+/// received. That models a receiver whose buffer stopped growing -- in-flight
+/// ends up limited by the window, and the window itself stays put.
 ///
 /// `app_read_bytes` states the opposite situation: over this step the
 /// application reads exactly that many bytes and then stops. The window is
@@ -265,6 +265,27 @@ pub trait DuplicateTrace: Send {
 /// | `None` | `Some(m)` | read `m` bytes against the standing buffer; window is what is left |
 /// | `Some(n)` | `Some(m)` | resize the buffer to `n`, then read `m` bytes from it |
 /// | `None` | `None` | carry the previous configuration forward for this step |
+///
+/// # Both fields on one step
+///
+/// The two apply in order: the buffer is resized first, and the read is taken
+/// against the new size. Three consequences are worth stating outright, because
+/// they are what distinguishes this from a buffer-only step:
+///
+/// - **The window is not pinned.** The "application keeps up" half of
+///   `set_rcv_buf` belongs to a step that states no read. Once `app_read_bytes`
+///   is present it is the application's behaviour, so the window follows from
+///   `n - unread` and decays as data arrives, exactly as for a read-only step.
+///   A step of `set_rcv_buf: n` and `app_read_bytes: m` is therefore *not*
+///   equivalent to a buffer-only step of `n` followed by a read of `m`.
+/// - **The backlog survives the resize.** Only the capacity changes; bytes
+///   already received and not yet read stay unread. Resizing does not discard,
+///   deliver, or otherwise account for them.
+/// - **The window saturates at zero.** With `unread` bytes outstanding the
+///   window is `n.saturating_sub(unread)`, so resizing to a value at or below
+///   the current backlog advertises a zero window until the application reads
+///   its way back under the new size. This is the intended way to state a
+///   receiver that shrank its buffer while behind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct RwndDecision {
     /// If `Some`, size the receive buffer to this many bytes and hold the

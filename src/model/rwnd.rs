@@ -16,6 +16,14 @@
 //! and `app_read_bytes` states an application that reads only so much (so the
 //! window decays as the backlog grows).
 //!
+//! A step carrying **both** resizes the buffer first and takes the read against
+//! the new size. The window is then `set_rcv_buf - unread`, not pinned at
+//! `set_rcv_buf`: stating a read means the application is the bottleneck, so the
+//! "application keeps up" half of a buffer-only step no longer applies. The
+//! unread backlog carries across the resize untouched, so a resize to at or
+//! below the current backlog advertises a zero window until the application
+//! catches up.
+//!
 //! ## Examples
 //!
 //! An example to build model from configuration:
@@ -33,6 +41,46 @@
 //! assert_eq!(decision.app_read_bytes, Some(1024));
 //! assert_eq!(duration, Duration::from_secs(1));
 //! assert_eq!(static_rwnd.next_rwnd(), None);
+//! ```
+//!
+//! The step above carries both fields, so it resizes the buffer to 64 KiB and
+//! then has the application read 1 KiB from it. The window that follows is
+//! `65536 - unread` rather than a window pinned at 65536 -- compare the
+//! buffer-only step below, which does pin it:
+//!
+//! ```
+//! # use netem_trace::model::StaticRwndConfig;
+//! # use netem_trace::{Duration, RwndTrace};
+//! // Buffer only: the window is held at 65536 and the application keeps up.
+//! let mut pinned = StaticRwndConfig::new()
+//!     .set_rcv_buf(65536)
+//!     .duration(Duration::from_secs(1))
+//!     .build();
+//! let (decision, _) = pinned.next_rwnd().unwrap();
+//! assert_eq!(decision.set_rcv_buf, Some(65536));
+//! assert_eq!(decision.app_read_bytes, None);
+//!
+//! // Both: same buffer, but the application now reads only 1 KiB per step, so
+//! // the window follows the backlog instead of staying at 65536.
+//! let mut app_limited = StaticRwndConfig::new()
+//!     .set_rcv_buf(65536)
+//!     .app_read(1024)
+//!     .duration(Duration::from_secs(1))
+//!     .build();
+//! let (decision, _) = app_limited.next_rwnd().unwrap();
+//! assert_eq!(decision.set_rcv_buf, Some(65536));
+//! assert_eq!(decision.app_read_bytes, Some(1024));
+//!
+//! // Shrinking the buffer under a standing backlog is stated the same way; the
+//! // window saturates at zero until the application reads its way back under it.
+//! let mut shrink = StaticRwndConfig::new()
+//!     .set_rcv_buf(8192)
+//!     .app_read(0)
+//!     .duration(Duration::from_secs(1))
+//!     .build();
+//! let (decision, _) = shrink.next_rwnd().unwrap();
+//! assert_eq!(decision.set_rcv_buf, Some(8192));
+//! assert_eq!(decision.app_read_bytes, Some(0));
 //! ```
 //!
 //! A more common use case is to build model from a configuration file (e.g. json file):
@@ -242,14 +290,24 @@ impl StaticRwndConfig {
         self
     }
 
-    /// Size the receive buffer, and hold the advertised window there with the
-    /// application draining continuously.
+    /// Size the receive buffer.
+    ///
+    /// On its own this also holds the advertised window at that value, with the
+    /// application draining continuously. Combined with [`Self::app_read`] it
+    /// only sets the size: the resize applies first, the read is taken against
+    /// the new size, and the window then follows `set_rcv_buf - unread` rather
+    /// than being pinned.
     pub fn set_rcv_buf(mut self, set_rcv_buf: u64) -> Self {
         self.set_rcv_buf = Some(set_rcv_buf);
         self
     }
 
     /// The application reads exactly this many bytes over the step, then stops.
+    ///
+    /// The window follows from what is left unread of the standing buffer, or
+    /// of the buffer this step sets when combined with [`Self::set_rcv_buf`].
+    /// The backlog carries across such a resize untouched, so the window
+    /// saturates at zero if the new size is at or below it.
     pub fn app_read(mut self, bytes: u64) -> Self {
         self.app_read_bytes = Some(bytes);
         self
@@ -314,8 +372,11 @@ mod test {
     use super::*;
     use crate::RwndTrace;
 
+    /// Both fields on one step: the buffer is resized and the read is taken
+    /// against the new size, so the decision carries both rather than one
+    /// overriding the other.
     #[test]
-    fn test_static_rwnd_model_app_read() {
+    fn test_static_rwnd_model_buffer_and_app_read() {
         let mut static_rwnd = StaticRwndConfig::new()
             .set_rcv_buf(65536)
             .app_read(1024)
