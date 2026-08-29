@@ -238,51 +238,55 @@ pub trait DuplicateTrace: Send {
     fn next_duplicate(&mut self) -> Option<(DuplicatePattern, Duration)>;
 }
 
-/// The action a rwnd trace instructs the receiver to take at a single step.
-///
-/// At most one action is present per step; a step that only reconfigures the
-/// receive buffer (`set_rcv_buf`) without any read or observed-remaining update
-/// leaves [`RwndDecision::action`] as `None`.
-///
-/// - `AppRead` drives the receiver model by simulating the application reading
-///   `bytes` from the receive buffer; the resulting rwnd is computed from the
-///   buffer state.
-/// - `Remaining` skips the simulation and directly enforces an observed rwnd
-///   of `rwnd` bytes — useful for replaying captured traces where only the
-///   advertised window is known.
-#[derive(Debug, Clone, PartialEq)]
-pub enum RwndAction {
-    /// The simulated application reads this many bytes from the receive buffer at this step.
-    AppRead { bytes: u64 },
-    /// The remaining rwnd value observed immediately after the app consumes data at this step.
-    Remaining { rwnd: u64 },
-}
-
 /// A single receive-side decision emitted by a [`RwndTrace`].
 ///
-/// Each step of a rwnd trace produces one `RwndDecision` paired with a
-/// [`Duration`] (see [`RwndTrace`]). Both fields are optional and independent:
-/// a step may resize the socket buffer, advance the receive model, both, or
-/// neither (though a step that sets neither is effectively a no-op).
-#[derive(Debug, Clone, PartialEq)]
+/// The two fields are independent, and between them they say what the receiver
+/// does for this step's duration.
+///
+/// `set_rcv_buf` sizes the receive buffer *and* states that the application is
+/// keeping up with it: the buffer holds that many bytes, the advertised window
+/// is held at that value, and the application drains continuously so the
+/// window's right edge slides forward with the data received. That models a
+/// receiver whose buffer stopped growing -- in-flight ends up limited by the
+/// window, and the window itself stays put.
+///
+/// `app_read_bytes` states the opposite situation: over this step the
+/// application reads exactly that many bytes and then stops. The window is
+/// whatever is left of the buffer once the unread backlog is subtracted, so it
+/// shrinks as data arrives and reaches zero when the buffer fills. That models a
+/// receiver whose application is the bottleneck.
+///
+/// Because the fields are independent, all four combinations are meaningful and
+/// none is a special case:
+///
+/// | `set_rcv_buf` | `app_read_bytes` | meaning |
+/// |---|---|---|
+/// | `Some(n)` | `None` | buffer `n`, window pinned at `n`, application drains continuously |
+/// | `None` | `Some(m)` | read `m` bytes against the standing buffer; window is what is left |
+/// | `Some(n)` | `Some(m)` | resize the buffer to `n`, then read `m` bytes from it |
+/// | `None` | `None` | carry the previous configuration forward for this step |
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct RwndDecision {
-    /// If `Some`, reconfigure the socket's receive buffer to this size at this step.
+    /// If `Some`, size the receive buffer to this many bytes and hold the
+    /// advertised window there, with the application draining continuously.
     pub set_rcv_buf: Option<u64>,
-    /// If `Some`, the app-read or observed-remaining action for this step.
-    pub action: Option<RwndAction>,
+    /// If `Some`, the application reads exactly this many bytes over this step
+    /// and then stops; the window follows from what is left unread.
+    pub app_read_bytes: Option<u64>,
 }
 
 /// This is a trait that represents a trace of receive-window decisions over time.
 ///
 /// The trace is a sequence of `(rwnd_decision, duration)` pairs. The decision
-/// describes how the socket's receive buffer, the application's read behavior,
-/// and/or the observed remaining window change at this step; the duration is
-/// how long this configuration lasts before the next step applies.
+/// describes what the receiver does -- how large its buffer is and how its
+/// application reads from it -- and the duration is how long that lasts before
+/// the next step applies.
 ///
 /// For example, if the sequence is
-/// `[(set_rcv_buf=64KB, app_read=1KB, 1s), (rwnd_remaining=32KB, 2s)]`,
-/// then the receive buffer is resized to 64KB and the app reads 1KB for 1s,
-/// then the observed rwnd becomes 32KB for 2s.
+/// `[(set_rcv_buf=64KB, 1s), (app_read_bytes=1KB, 2s)]`, then for 1s the
+/// receiver holds a 64KB window and drains it as fast as data arrives, and for
+/// the next 2s its application reads only 1KB, so the window decays from 64KB
+/// as the unread backlog grows.
 ///
 /// Each `next_rwnd` call returns **the next decision and its duration** in the
 /// sequence, or **None** when the trace is exhausted. Mirrors the shape of
