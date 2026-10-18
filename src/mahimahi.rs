@@ -21,6 +21,8 @@
 //! assert_eq!(static_bw.mahimahi_to_string(&Duration::from_millis(5)), "1\n2\n3\n4\n5");
 //! ```
 
+#[cfg(feature = "pdo-model")]
+use crate::model::{HeavyPdoTraceConfig, RepeatedHeavyPdoPatternConfig, TraceHeavyPdoConfig};
 use crate::{
     model::{BwTraceConfig, RepeatedBwPatternConfig, StaticBwConfig},
     Bandwidth, BwTrace, Duration,
@@ -199,11 +201,125 @@ pub fn load_mahimahi_trace(
         ))
 }
 
+/// How many bytes one line of a mahimahi trace can deliver in mahimahi (`PACKET_SIZE` in mahimahi).
+pub const MAHIMAHI_PDO_BYTES: u64 = 1504;
+
+/// Load a mahimahi trace to a heavy PDO trace ([`RepeatedHeavyPdoPatternConfig`]).
+///
+/// The `trace` is a sequence of timestamps (in milliseconds), each timestamp represents an opportunity
+/// of sending `pdo_bytes` bytes at that timestamp. Use [`MAHIMAHI_PDO_BYTES`] to follow mahimahi,
+/// or 1400 to follow the heavy PDO trace of CellReplay.
+///
+/// Timestamps with the same value are merged into one PDO. For example, if the trace is \[1, 1, 5, 6\]
+/// and `pdo_bytes` is 1504, the heavy PDO trace will be \[(1ms, 3008), (4ms, 1504), (1ms, 1504)\].
+///
+/// The `count` is the number of times the trace repeats. If `count` is `None` or `Some(0)`,
+/// then the trace will repeat forever. Like mahimahi, the next cycle starts at the last timestamp,
+/// so leading zero timestamps go out together with the last timestamp of the previous cycle.
+///
+/// Unlike [`load_mahimahi_trace`], there is no bandwidth here, so the timing is exactly the same as in mahimahi.
+///
+/// Returns `Err` string if the mahimahi trace is invalid.
+#[cfg(feature = "pdo-model")]
+pub fn load_mahimahi_heavy_pdo_trace(
+    trace: Vec<u64>,
+    count: Option<usize>,
+    pdo_bytes: u64,
+) -> Result<RepeatedHeavyPdoPatternConfig, &'static str> {
+    let mut pattern: Vec<(Duration, u64)> = vec![];
+    let mut last_ts = 0;
+    for ts in trace {
+        match ts.cmp(&last_ts) {
+            std::cmp::Ordering::Less => {
+                return Err("timestamps must be monotonically nondecreasing");
+            }
+            std::cmp::Ordering::Equal if !pattern.is_empty() => {
+                pattern.last_mut().unwrap().1 += pdo_bytes;
+            }
+            _ => {
+                pattern.push((Duration::from_millis(ts - last_ts), pdo_bytes));
+                last_ts = ts;
+            }
+        }
+    }
+    if last_ts == 0 {
+        return Err("trace must last for a nonzero amount of time");
+    }
+    Ok(RepeatedHeavyPdoPatternConfig::new()
+        .count(count.unwrap_or(0))
+        .pattern(vec![
+            Box::new(TraceHeavyPdoConfig::new().pattern(pattern)) as Box<dyn HeavyPdoTraceConfig>
+        ]))
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::model::StaticBwConfig;
     use crate::Bandwidth;
+
+    #[test]
+    #[cfg(feature = "pdo-model")]
+    fn test_load_heavy_pdo() {
+        use crate::HeavyPdoTrace;
+
+        assert!(matches!(
+            load_mahimahi_heavy_pdo_trace(vec![0, 2, 4, 3], None, MAHIMAHI_PDO_BYTES),
+            Err("timestamps must be monotonically nondecreasing")
+        ));
+        assert!(matches!(
+            load_mahimahi_heavy_pdo_trace(vec![0, 0, 0], None, MAHIMAHI_PDO_BYTES),
+            Err("trace must last for a nonzero amount of time")
+        ));
+        assert!(matches!(
+            load_mahimahi_heavy_pdo_trace(vec![], None, MAHIMAHI_PDO_BYTES),
+            Err("trace must last for a nonzero amount of time")
+        ));
+
+        let mut pdo = load_mahimahi_heavy_pdo_trace(vec![1, 1, 5, 6], Some(2), 1504)
+            .unwrap()
+            .build();
+        for _ in 0..2 {
+            assert_eq!(pdo.next_heavy_pdo(), Some((Duration::from_millis(1), 3008)));
+            assert_eq!(pdo.next_heavy_pdo(), Some((Duration::from_millis(4), 1504)));
+            assert_eq!(pdo.next_heavy_pdo(), Some((Duration::from_millis(1), 1504)));
+        }
+        assert_eq!(pdo.next_heavy_pdo(), None);
+
+        // leading zeros: in the second cycle they go out at the same time as the last PDO
+        let mut pdo = load_mahimahi_heavy_pdo_trace(vec![0, 0, 2, 2, 3], None, 1400)
+            .unwrap()
+            .build();
+        for _ in 0..3 {
+            assert_eq!(pdo.next_heavy_pdo(), Some((Duration::ZERO, 2800)));
+            assert_eq!(pdo.next_heavy_pdo(), Some((Duration::from_millis(2), 2800)));
+            assert_eq!(pdo.next_heavy_pdo(), Some((Duration::from_millis(1), 1400)));
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "pdo-model")]
+    fn test_heavy_pdo_matches_timestamps() {
+        use crate::HeavyPdoTrace;
+
+        // replaying the PDOs gives back the same timestamps as mahimahi, also across cycles
+        let trace = vec![2, 2, 3, 3, 4, 4, 5, 5, 8, 9];
+        let mut pdo = load_mahimahi_heavy_pdo_trace(trace.clone(), Some(2), 1)
+            .unwrap()
+            .build();
+        let mut now = 0;
+        let mut replayed = vec![];
+        while let Some((interval, bytes)) = pdo.next_heavy_pdo() {
+            now += interval.as_millis() as u64;
+            replayed.extend(std::iter::repeat_n(now, bytes as usize));
+        }
+        let expected: Vec<u64> = trace
+            .iter()
+            .copied()
+            .chain(trace.iter().map(|ts| ts + 9))
+            .collect();
+        assert_eq!(replayed, expected);
+    }
 
     #[test]
     fn test_trait() {

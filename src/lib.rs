@@ -105,6 +105,8 @@
 
 #[cfg(feature = "mahimahi")]
 pub mod mahimahi;
+#[cfg(all(feature = "mahimahi", feature = "pdo-model"))]
+pub use mahimahi::{load_mahimahi_heavy_pdo_trace, MAHIMAHI_PDO_BYTES};
 #[cfg(feature = "mahimahi")]
 pub use mahimahi::{load_mahimahi_trace, Mahimahi, MahimahiExt};
 
@@ -114,6 +116,7 @@ pub use mahimahi::{load_mahimahi_trace, Mahimahi, MahimahiExt};
     feature = "loss-model",
     feature = "duplicate-model",
     feature = "rwnd-model",
+    feature = "pdo-model",
     feature = "model",
 ))]
 pub mod model;
@@ -314,6 +317,86 @@ pub struct RwndDecision {
 /// [`BwTrace`], [`DelayTrace`], and [`LossTrace`].
 pub trait RwndTrace: Send {
     fn next_rwnd(&mut self) -> Option<(RwndDecision, Duration)>;
+}
+
+/// This is a trait that represents a trace of heavy packet delivery opportunities (PDOs).
+///
+/// The trace is a sequence of `(interval, bytes)` pairs.
+/// The interval is the time since the previous PDO (or since the start of the trace for the first one).
+/// The bytes is how many bytes this PDO can deliver.
+///
+/// There is no concept of bandwidth here. For example, if the sequence is
+/// [(1ms, 1500), (0ms, 1500), (2ms, 3000)], then 3000 bytes can go out at 1ms
+/// and another 3000 bytes at 3ms.
+///
+/// A mahimahi trace (or the heavy PDO trace of CellReplay) can be loaded as a heavy PDO trace,
+/// see `load_mahimahi_heavy_pdo_trace` (needs the `mahimahi` feature).
+///
+/// The next_heavy_pdo function either returns **the next interval and its bytes**
+/// in the sequence, or **None** if the trace goes to end.
+pub trait HeavyPdoTrace: Send {
+    fn next_heavy_pdo(&mut self) -> Option<(Duration, u64)>;
+}
+
+/// A single light PDO record, one line of a CellReplay light PDO (packet train) trace.
+///
+/// - `timestamp` is when this record was measured, from the start of the trace.
+/// - `base_delay` is the delay of the first packet of an active period starting at `timestamp`.
+/// - `opportunities` are the times of the light PDOs, measured from the start of the active
+///   period. They are nondecreasing and usually start from 0.
+///
+/// How many bytes one light PDO can deliver is up to the user of the trace (CellReplay uses 1400 bytes).
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct LightPdo {
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "humantime_serde")
+    )]
+    pub timestamp: Duration,
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "humantime_serde")
+    )]
+    pub base_delay: Delay,
+    #[cfg_attr(
+        all(feature = "serde", feature = "human"),
+        serde(with = "duration_vec_serde")
+    )]
+    pub opportunities: Vec<Duration>,
+}
+
+/// This is a trait that represents a trace of light PDO records.
+///
+/// The trace is a sequence of [`LightPdo`], with nondecreasing timestamps.
+/// Unlike other traces, the records are not consumed one after another in time:
+/// the user (e.g. a cell in an emulator) picks the record matching the moment
+/// the link goes from inactive to active.
+///
+/// The next_light_pdo function either returns **the next record**
+/// in the sequence, or **None** if the trace goes to end.
+pub trait LightPdoTrace: Send {
+    fn next_light_pdo(&mut self) -> Option<LightPdo>;
+}
+
+#[cfg(all(feature = "serde", feature = "human"))]
+mod duration_vec_serde {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use std::time::Duration;
+
+    pub fn serialize<S: Serializer>(v: &[Duration], serializer: S) -> Result<S::Ok, S::Error> {
+        v.iter()
+            .map(humantime_serde::Serde::from)
+            .collect::<Vec<_>>()
+            .serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Vec<Duration>, D::Error> {
+        let v: Vec<humantime_serde::Serde<Duration>> = Vec::deserialize(deserializer)?;
+        Ok(v.into_iter().map(|d| d.into_inner()).collect())
+    }
 }
 
 #[cfg(test)]
