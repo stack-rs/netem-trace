@@ -77,6 +77,7 @@ pub mod pdo;
 pub use pdo::{
     load_cellreplay_light_pdo_trace, HeavyPdoTraceConfig, LightPdoTraceConfig,
     RepeatedHeavyPdoPatternConfig, StaticHeavyPdoConfig, TraceHeavyPdoConfig, TraceLightPdoConfig,
+    CELLREPLAY_PDO_SIZE,
 };
 #[cfg(feature = "pdo-model")]
 pub use pdo::{RepeatedHeavyPdoPattern, StaticHeavyPdo, TraceHeavyPdo, TraceLightPdo};

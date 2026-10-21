@@ -345,7 +345,7 @@ pub trait HeavyPdoTrace: Send {
 /// - `opportunities` are the times of the light PDOs, measured from the start of the active
 ///   period. They are nondecreasing and usually start from 0.
 ///
-/// How many bytes one light PDO can deliver is up to the user of the trace (CellReplay uses 1400 bytes).
+/// How many bytes one light PDO can deliver is given by the trace, see [`LightPdoTrace::pdo_size`].
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct LightPdo {
@@ -375,8 +375,12 @@ pub struct LightPdo {
 ///
 /// The next_light_pdo function either returns **the next record**
 /// in the sequence, or **None** if the trace goes to end.
+///
+/// The pdo_size function returns how many bytes one light PDO can deliver.
+/// It is part of the trace, so the user doesn't need to know where the trace came from.
 pub trait LightPdoTrace: Send {
     fn next_light_pdo(&mut self) -> Option<LightPdo>;
+    fn pdo_size(&self) -> u64;
 }
 
 #[cfg(all(feature = "serde", feature = "human"))]

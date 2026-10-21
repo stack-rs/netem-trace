@@ -76,11 +76,19 @@ pub trait LightPdoTraceConfig: DynClone + Send + std::fmt::Debug {
 
 dyn_clone::clone_trait_object!(LightPdoTraceConfig);
 
+/// How many bytes one PDO can deliver in CellReplay (both heavy and light PDO traces).
+///
+/// It is the default PDO size of [`StaticHeavyPdo`] and [`TraceLightPdo`].
+/// For mahimahi traces, use `MAHIMAHI_PDO_BYTES` (1504 bytes) instead.
+pub const CELLREPLAY_PDO_SIZE: u64 = 1400;
+
 /// The model of a static heavy PDO trace.
 ///
 /// This model always returns the same `(interval, bytes)` for `count` times.
 ///
 /// If the `count` is 0, it will be repeated forever.
+///
+/// If `bytes` is not set, it defaults to [`CELLREPLAY_PDO_SIZE`].
 ///
 /// ## Examples
 ///
@@ -212,7 +220,8 @@ pub struct RepeatedHeavyPdoPatternConfig {
 
 /// The model of a light PDO trace replaying a list of [`LightPdo`] records.
 ///
-/// Each record is returned once, in order.
+/// Each record is returned once, in order. Every light PDO can deliver `pdo_size` bytes,
+/// which defaults to [`CELLREPLAY_PDO_SIZE`].
 ///
 /// ## Examples
 ///
@@ -226,13 +235,16 @@ pub struct RepeatedHeavyPdoPatternConfig {
 /// };
 /// let mut trace_pdo = TraceLightPdoConfig::new()
 ///     .pattern(vec![record.clone()])
+///     .pdo_size(1200)
 ///     .build();
+/// assert_eq!(trace_pdo.pdo_size(), 1200);
 /// assert_eq!(trace_pdo.next_light_pdo(), Some(record));
 /// assert_eq!(trace_pdo.next_light_pdo(), None);
 /// ```
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct TraceLightPdo {
     pub pattern: Vec<LightPdo>,
+    pub pdo_size: u64,
     pub index: usize,
 }
 
@@ -243,6 +255,8 @@ pub struct TraceLightPdo {
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct TraceLightPdoConfig {
     pub pattern: Vec<LightPdo>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub pdo_size: Option<u64>,
 }
 
 impl HeavyPdoTrace for StaticHeavyPdo {
@@ -301,6 +315,10 @@ impl LightPdoTrace for TraceLightPdo {
         }
         record
     }
+
+    fn pdo_size(&self) -> u64 {
+        self.pdo_size
+    }
 }
 
 impl StaticHeavyPdoConfig {
@@ -330,7 +348,7 @@ impl StaticHeavyPdoConfig {
     pub fn build(self) -> StaticHeavyPdo {
         StaticHeavyPdo {
             interval: self.interval.unwrap_or_else(|| Duration::from_millis(1)),
-            bytes: self.bytes.unwrap_or(1500),
+            bytes: self.bytes.unwrap_or(CELLREPLAY_PDO_SIZE),
             count: self.count,
             current_count: 0,
         }
@@ -386,7 +404,10 @@ impl RepeatedHeavyPdoPatternConfig {
 
 impl TraceLightPdoConfig {
     pub fn new() -> Self {
-        Self { pattern: vec![] }
+        Self {
+            pattern: vec![],
+            pdo_size: None,
+        }
     }
 
     pub fn pattern(mut self, pattern: Vec<LightPdo>) -> Self {
@@ -394,9 +415,15 @@ impl TraceLightPdoConfig {
         self
     }
 
+    pub fn pdo_size(mut self, pdo_size: u64) -> Self {
+        self.pdo_size = Some(pdo_size);
+        self
+    }
+
     pub fn build(self) -> TraceLightPdo {
         TraceLightPdo {
             pattern: self.pattern,
+            pdo_size: self.pdo_size.unwrap_or(CELLREPLAY_PDO_SIZE),
             index: 0,
         }
     }
@@ -580,6 +607,22 @@ mod test {
     }
 
     #[test]
+    fn test_default_pdo_size() {
+        let mut heavy = StaticHeavyPdoConfig::new().count(1).build();
+        assert_eq!(
+            heavy.next_heavy_pdo(),
+            Some((Duration::from_millis(1), CELLREPLAY_PDO_SIZE))
+        );
+
+        let light = TraceLightPdoConfig::new().build();
+        assert_eq!(light.pdo_size(), CELLREPLAY_PDO_SIZE);
+        let light = load_cellreplay_light_pdo_trace("0 30 0").unwrap().build();
+        assert_eq!(light.pdo_size(), CELLREPLAY_PDO_SIZE);
+        let light = TraceLightPdoConfig::new().pdo_size(1500).build();
+        assert_eq!(light.pdo_size(), 1500);
+    }
+
+    #[test]
     fn test_forever() {
         let mut model = TraceHeavyPdoConfig::new()
             .pattern(vec![(Duration::from_millis(1), 1500)])
@@ -687,5 +730,17 @@ mod test {
             model.next_light_pdo().unwrap().opportunities,
             vec![Duration::ZERO, Duration::from_millis(2)]
         );
+        assert_eq!(model.pdo_size(), CELLREPLAY_PDO_SIZE);
+
+        // pdo_size is kept in the config when it is set
+        let light = Box::new(
+            TraceLightPdoConfig::new()
+                .pattern(vec![LightPdo::default()])
+                .pdo_size(1500),
+        ) as Box<dyn LightPdoTraceConfig>;
+        let ser_str = serde_json::to_string(&light).unwrap();
+        assert!(ser_str.ends_with(",\"pdo_size\":1500}}"));
+        let des: Box<dyn LightPdoTraceConfig> = serde_json::from_str(&ser_str).unwrap();
+        assert_eq!(des.into_model().pdo_size(), 1500);
     }
 }

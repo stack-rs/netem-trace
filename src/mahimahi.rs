@@ -208,7 +208,7 @@ pub const MAHIMAHI_PDO_BYTES: u64 = 1504;
 ///
 /// The `trace` is a sequence of timestamps (in milliseconds), each timestamp represents an opportunity
 /// of sending `pdo_bytes` bytes at that timestamp. Use [`MAHIMAHI_PDO_BYTES`] to follow mahimahi,
-/// or 1400 to follow the heavy PDO trace of CellReplay.
+/// or [`CELLREPLAY_PDO_SIZE`](crate::model::CELLREPLAY_PDO_SIZE) to follow the heavy PDO trace of CellReplay.
 ///
 /// Timestamps with the same value are merged into one PDO. For example, if the trace is \[1, 1, 5, 6\]
 /// and `pdo_bytes` is 1504, the heavy PDO trace will be \[(1ms, 3008), (4ms, 1504), (1ms, 1504)\].
