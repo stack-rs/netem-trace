@@ -124,6 +124,8 @@ pub mod model;
 #[cfg(feature = "trace-ext")]
 pub mod series;
 
+pub mod peek;
+
 pub use bandwidth::Bandwidth;
 pub use std::time::Duration;
 
