@@ -44,6 +44,7 @@ model = [
   "loss-model",
   "duplicate-model",
   "rwnd-model",
+  "pdo-model",
 ]
 bw-model = ["dep:rand", "dep:rand_distr", "dep:dyn-clone"]
 delay-model = ["dep:dyn-clone"]
@@ -51,6 +52,7 @@ delay-per-packet-model = ["dep:dyn-clone"]
 loss-model = ["dep:dyn-clone"]
 duplicate-model = ["dep:dyn-clone"]
 rwnd-model = ["dep:dyn-clone"]
+pdo-model = ["dep:dyn-clone"]
 serde = ["dep:serde", "dep:typetag", "bandwidth/serde"]
 mahimahi = ["dep:itertools"]
 human = [

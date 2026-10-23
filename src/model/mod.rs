@@ -11,6 +11,7 @@
 //! Enable `loss-model` feature to use the LossTrace models.
 //! Enable `duplicate-model` feature to use the DuplicateTrace models.
 //! Enable `rwnd-model` feature to use the RwndTrace models.
+//! Enable `pdo-model` feature to use the HeavyPdoTrace and LightPdoTrace models.
 
 #[cfg(feature = "bw-model")]
 pub mod bw;
@@ -68,6 +69,18 @@ pub mod rwnd;
 pub use rwnd::{RepeatedRwndPattern, StaticRwnd};
 #[cfg(feature = "rwnd-model")]
 pub use rwnd::{RepeatedRwndPatternConfig, RwndTraceConfig, StaticRwndConfig};
+
+#[cfg(feature = "pdo-model")]
+pub mod pdo;
+
+#[cfg(feature = "pdo-model")]
+pub use pdo::{
+    load_cellreplay_light_pdo_trace, HeavyPdoTraceConfig, LightPdoTraceConfig,
+    RepeatedHeavyPdoPatternConfig, StaticHeavyPdoConfig, TraceHeavyPdoConfig, TraceLightPdoConfig,
+    CELLREPLAY_PDO_SIZE,
+};
+#[cfg(feature = "pdo-model")]
+pub use pdo::{RepeatedHeavyPdoPattern, StaticHeavyPdo, TraceHeavyPdo, TraceLightPdo};
 
 #[cfg(feature = "truncated-normal")]
 pub mod solve_truncate;
