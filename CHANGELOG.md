@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## [v0.5.0](https://github.com/stack-rs/netem-trace/releases/tag/v0.5.0) - 2026-10-23 14:02:40+00:00
+
+## What's Changed
+
+- Add heavy and light PDO traces by @limonuser in https://github.com/stack-rs/netem-trace/pull/29
+- Make every trace model peekable by @Lethe10137 in https://github.com/stack-rs/netem-trace/pull/30
+
+## New Contributors
+
+- @limonuser made their first contribution in https://github.com/stack-rs/netem-trace/pull/29
+
+**Full Changelog**: https://github.com/stack-rs/netem-trace/compare/v0.4.7...v0.5.0
+
+### Feature
+
+- model:
+  - add heavy and light PDO traces (#29) ([f6e2b81](https://github.com/stack-rs/netem-trace/commit/f6e2b81b51ae3bebaa618711444f42c5f1a992e1)) ([#29](https://github.com/stack-rs/netem-trace/pull/29))
+
+- trace:
+  - make every trace model peekable (#30) ([fbca21b](https://github.com/stack-rs/netem-trace/commit/fbca21b6f8f4b25f8c4b2cc7002c45de3a2ced33)) ([#30](https://github.com/stack-rs/netem-trace/pull/30))
+
 ## [v0.4.7](https://github.com/stack-rs/netem-trace/releases/tag/v0.4.7) - 2026-08-29 07:02:45+00:00
 
 ## What's Changed
